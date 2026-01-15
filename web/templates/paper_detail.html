@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if paper %}{{ paper.title[:60] }}...{% else %}Articolo non trovato{% endif %} - Scientific Paper Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a1a2e;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --card-bg: #ffffff;
+            --border-color: #e8e8e8;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            padding: 15px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .navbar-brand {
+            color: white !important;
+            font-weight: 700;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            color: white !important;
+        }
+        
+        .breadcrumb-section {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+        }
+        
+        .breadcrumb {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb-item a {
+            color: var(--gradient-start);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-item.active {
+            color: var(--text-secondary);
+        }
+        
+        .paper-header {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            padding: 50px 0;
+            color: white;
+        }
+        
+        .paper-title {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 20px;
+        }
+        
+        .paper-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            opacity: 0.95;
+        }
+        
+        .paper-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .paper-meta-item i {
+            font-size: 1.1rem;
+        }
+        
+        .content-section {
+            padding: 40px 0;
+        }
+        
+        .paper-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .card-header-custom {
+            background: linear-gradient(135deg, #f8f9fc 0%, #f1f3f8 100%);
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .card-header-custom h5 {
+            margin: 0;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .card-header-custom i {
+            font-size: 1.3rem;
+            color: var(--gradient-start);
+        }
+        
+        .card-body-custom {
+            padding: 30px;
+        }
+        
+        .abstract-text {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            text-align: justify;
+        }
+        
+        .keywords-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .keyword-tag {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            color: var(--gradient-start);
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        /* Tables Section */
+        .tables-section, .figures-section {
+            margin-top: 20px;
+        }
+        
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+        
+        .badge-count-table {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+        
+        .badge-count-figure {
+            background: rgba(236, 72, 153, 0.15);
+            color: #ec4899;
+        }
+        
+        .table-item, .figure-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--gradient-start);
+        }
+        
+        .table-item:last-child, .figure-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .item-caption {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .item-caption i {
+            color: var(--gradient-start);
+        }
+        
+        .table-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+        
+        .table-preview table {
+            width: 100%;
+            font-size: 0.85rem;
+            margin: 0;
+            border-collapse: collapse;
+        }
+        
+        .table-preview th {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            padding: 12px;
+            font-weight: 500;
+            text-align: left;
+        }
+        
+        .table-preview td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .table-preview tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .figure-preview {
+            text-align: center;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .figure-preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .figure-caption {
+            margin-top: 15px;
+            font-style: italic;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Empty States */
+        .empty-section {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-section i {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 15px;
+        }
+        
+        .empty-section p {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+        
+        /* Paper Not Found State */
+        .not-found-container {
+            text-align: center;
+            padding: 100px 30px;
+        }
+        
+        .not-found-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+        }
+        
+        .not-found-icon i {
+            font-size: 3rem;
+            color: #ef4444;
+        }
+        
+        .not-found-container h2 {
+            color: var(--text-primary);
+            margin-bottom: 15px;
+        }
+        
+        .not-found-container p {
+            color: var(--text-secondary);
+            max-width: 400px;
+            margin: 0 auto 30px;
+        }
+        
+        /* External Link Button */
+        .btn-external {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-external:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.35);
+            color: white;
+        }
+        
+        .btn-outline-custom {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: white;
+            color: var(--gradient-start);
+            border: 2px solid var(--gradient-start);
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-custom:hover {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            border-color: transparent;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+        
+        @media (max-width: 768px) {
+            .paper-title {
+                font-size: 1.5rem;
+            }
+            
+            .paper-meta {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .card-body-custom {
+                padding: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn-external, .btn-outline-custom {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-journal-richtext"></i>
+                Scientific Paper Search
+            </a>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/"><i class="bi bi-house"></i> Home</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    
+    {% if paper is not defined or paper is none %}
+        <!-- Paper Not Found -->
+        <div class="content-section">
+            <div class="container">
+                <div class="paper-card">
+                    <div class="not-found-container">
+                        <div class="not-found-icon">
+                            <i class="bi bi-file-earmark-x"></i>
+                        </div>
+                        <h2>Articolo Non Trovato</h2>
+                        <p>L'articolo richiesto non esiste o non e piu disponibile nel database. Potrebbe essere stato rimosso o l'ID potrebbe non essere corretto.</p>
+                        <div class="action-buttons" style="justify-content: center;">
+                            <a href="/" class="btn-outline-custom">
+                                <i class="bi bi-arrow-left"></i> Torna alla Home
+                            </a>
+                            <a href="javascript:history.back()" class="btn-external">
+                                <i class="bi bi-arrow-counterclockwise"></i> Indietro
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Breadcrumb -->
+        <div class="breadcrumb-section">
+            <div class="container">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/"><i class="bi bi-house"></i> Home</a></li>
+                        <li class="breadcrumb-item"><a href="/search?q=&type=papers">Articoli</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">
+                            {{ paper.title[:40] if paper.title else 'Dettaglio' }}...
+                        </li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Paper Header -->
+        <div class="paper-header">
+            <div class="container">
+                <h1 class="paper-title">{{ paper.title if paper.title else 'Titolo non disponibile' }}</h1>
+                <div class="paper-meta">
+                    {% if paper.authors %}
+                        <div class="paper-meta-item">
+                            <i class="bi bi-people"></i>
+                            <span>{{ paper.authors[:150] }}{% if paper.authors|length > 150 %}...{% endif %}</span>
+                        </div>
+                    {% endif %}
+                    {% if paper.publication_date %}
+                        <div class="paper-meta-item">
+                            <i class="bi bi-calendar3"></i>
+                            <span>{{ paper.publication_date }}</span>
+                        </div>
+                    {% endif %}
+                    {% if paper.source %}
+                        <div class="paper-meta-item">
+                            <i class="bi bi-journal"></i>
+                            <span>{{ paper.source }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content Section -->
+        <div class="content-section">
+            <div class="container">
+                <!-- Abstract -->
+                <div class="paper-card">
+                    <div class="card-header-custom">
+                        <i class="bi bi-text-paragraph"></i>
+                        <h5>Abstract</h5>
+                    </div>
+                    <div class="card-body-custom">
+                        {% if paper.abstract %}
+                            <p class="abstract-text">{{ paper.abstract }}</p>
+                        {% else %}
+                            <div class="empty-section">
+                                <i class="bi bi-text-paragraph"></i>
+                                <p>Abstract non disponibile per questo articolo</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Keywords -->
+                {% if paper.keywords %}
+                    <div class="paper-card">
+                        <div class="card-header-custom">
+                            <i class="bi bi-tags"></i>
+                            <h5>Keywords</h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <ul class="keywords-list">
+                                {% for keyword in paper.keywords.split(',') %}
+                                    <li class="keyword-tag">{{ keyword.strip() }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Tables Section -->
+                <div class="paper-card tables-section">
+                    <div class="card-header-custom">
+                        <i class="bi bi-table"></i>
+                        <h5>Tabelle</h5>
+                        {% if tables is defined and tables %}
+                            <span class="section-badge badge-count-table">
+                                <i class="bi bi-hash"></i> {{ tables|length }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body-custom">
+                        {% if tables is not defined or tables is none or tables|length == 0 %}
+                            <div class="empty-section">
+                                <i class="bi bi-table"></i>
+                                <p>Nessuna tabella estratta per questo articolo</p>
+                            </div>
+                        {% else %}
+                            {% for table in tables %}
+                                <div class="table-item">
+                                    <div class="item-caption">
+                                        <i class="bi bi-table"></i>
+                                        {{ table.caption if table.caption else 'Tabella ' ~ loop.index }}
+                                    </div>
+                                    {% if table.content %}
+                                        <div class="table-preview">
+                                            <pre style="margin: 0; white-space: pre-wrap; font-size: 0.85rem;">{{ table.content[:1000] }}{% if table.content|length > 1000 %}...{% endif %}</pre>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Figures Section -->
+                <div class="paper-card figures-section">
+                    <div class="card-header-custom">
+                        <i class="bi bi-image"></i>
+                        <h5>Figure</h5>
+                        {% if figures is defined and figures %}
+                            <span class="section-badge badge-count-figure">
+                                <i class="bi bi-hash"></i> {{ figures|length }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body-custom">
+                        {% if figures is not defined or figures is none or figures|length == 0 %}
+                            <div class="empty-section">
+                                <i class="bi bi-image"></i>
+                                <p>Nessuna figura estratta per questo articolo</p>
+                            </div>
+                        {% else %}
+                            {% for figure in figures %}
+                                <div class="figure-item">
+                                    <div class="item-caption">
+                                        <i class="bi bi-image"></i>
+                                        {{ figure.caption if figure.caption else 'Figura ' ~ loop.index }}
+                                    </div>
+                                    <div class="figure-preview">
+                                        {% if figure.url %}
+                                            <img src="{{ figure.url }}" 
+                                                 alt="{{ figure.caption }}"
+                                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300?text=Immagine+non+disponibile';">
+                                        {% else %}
+                                            <i class="bi bi-image" style="font-size: 4rem; color: #ccc;"></i>
+                                            <p class="figure-caption">URL immagine non disponibile</p>
+                                        {% endif %}
+                                        {% if figure.caption %}
+                                            <p class="figure-caption">{{ figure.caption }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    {% if paper.url %}
+                        <a href="{{ paper.url }}" target="_blank" class="btn-external">
+                            <i class="bi bi-box-arrow-up-right"></i> Vedi Articolo Originale
+                        </a>
+                    {% endif %}
+                    <a href="javascript:history.back()" class="btn-outline-custom">
+                        <i class="bi bi-arrow-left"></i> Torna ai Risultati
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Errore - Scientific Paper Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a1a2e;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --error-color: #ef4444;
+            --error-light: #fef2f2;
+            --warning-color: #f59e0b;
+            --warning-light: #fffbeb;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        
+        .error-container {
+            width: 100%;
+            max-width: 600px;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .error-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+        
+        .error-header {
+            padding: 40px;
+            text-align: center;
+            {% if error_code is defined and error_code == 404 %}
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            {% elif error_code is defined and error_code == 500 %}
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            {% else %}
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            {% endif %}
+        }
+        
+        .error-icon {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            {% if error_code is defined and error_code == 404 %}
+            background: rgba(245, 158, 11, 0.2);
+            {% elif error_code is defined and error_code == 500 %}
+            background: rgba(239, 68, 68, 0.2);
+            {% else %}
+            background: rgba(99, 102, 241, 0.2);
+            {% endif %}
+        }
+        
+        .error-icon i {
+            font-size: 2.5rem;
+            {% if error_code is defined and error_code == 404 %}
+            color: var(--warning-color);
+            {% elif error_code is defined and error_code == 500 %}
+            color: var(--error-color);
+            {% else %}
+            color: var(--gradient-start);
+            {% endif %}
+        }
+        
+        .error-code {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 10px;
+            {% if error_code is defined and error_code == 404 %}
+            color: var(--warning-color);
+            {% elif error_code is defined and error_code == 500 %}
+            color: var(--error-color);
+            {% else %}
+            color: var(--gradient-start);
+            {% endif %}
+        }
+        
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+        }
+        
+        .error-body {
+            padding: 40px;
+        }
+        
+        .error-message {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid;
+            {% if error_code is defined and error_code == 404 %}
+            border-color: var(--warning-color);
+            {% elif error_code is defined and error_code == 500 %}
+            border-color: var(--error-color);
+            {% else %}
+            border-color: var(--gradient-start);
+            {% endif %}
+        }
+        
+        .error-message p {
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.6;
+        }
+        
+        .error-message code {
+            background: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+            color: var(--error-color);
+            border: 1px solid #eee;
+        }
+        
+        .suggestions-box {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .suggestions-box h6 {
+            color: #166534;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .suggestions-box ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #15803d;
+        }
+        
+        .suggestions-box li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-primary-custom {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.35);
+            color: white;
+        }
+        
+        .btn-secondary-custom {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 24px;
+            background: white;
+            color: var(--gradient-start);
+            border: 2px solid var(--gradient-start);
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary-custom:hover {
+            background: var(--gradient-start);
+            color: white;
+        }
+        
+        .error-details {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .error-details summary {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .error-details pre {
+            background: #1a1a2e;
+            color: #a0aec0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            max-height: 200px;
+        }
+        
+        .footer-text {
+            margin-top: 30px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+        
+        /* Different error type styles */
+        .error-type-connection .error-header {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+        
+        .error-type-elasticsearch .error-header {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+        
+        @media (max-width: 576px) {
+            .error-code {
+                font-size: 3rem;
+            }
+            
+            .error-title {
+                font-size: 1.25rem;
+            }
+            
+            .error-header, .error-body {
+                padding: 30px 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-card">
+            <div class="error-header">
+                <div class="error-icon">
+                    {% if error_code is defined %}
+                        {% if error_code == 404 %}
+                            <i class="bi bi-search"></i>
+                        {% elif error_code == 500 %}
+                            <i class="bi bi-exclamation-triangle"></i>
+                        {% elif error_code == 503 %}
+                            <i class="bi bi-cloud-slash"></i>
+                        {% else %}
+                            <i class="bi bi-x-circle"></i>
+                        {% endif %}
+                    {% else %}
+                        <i class="bi bi-exclamation-circle"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="error-code">
+                    {% if error_code is defined %}
+                        {{ error_code }}
+                    {% else %}
+                        Errore
+                    {% endif %}
+                </div>
+                
+                <div class="error-title">
+                    {% if error_code is defined %}
+                        {% if error_code == 404 %}
+                            Pagina Non Trovata
+                        {% elif error_code == 500 %}
+                            Errore del Server
+                        {% elif error_code == 503 %}
+                            Servizio Non Disponibile
+                        {% else %}
+                            Si e verificato un errore
+                        {% endif %}
+                    {% else %}
+                        Si e verificato un errore
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="error-body">
+                <div class="error-message">
+                    {% if message is defined and message %}
+                        <p>{{ message }}</p>
+                    {% elif error is defined and error %}
+                        <p>{{ error }}</p>
+                    {% else %}
+                        <p>Si e verificato un errore imprevisto durante l'elaborazione della richiesta. Riprova piu tardi o contatta l'amministratore.</p>
+                    {% endif %}
+                </div>
+                
+                <div class="suggestions-box">
+                    <h6><i class="bi bi-lightbulb"></i> Cosa puoi fare:</h6>
+                    <ul>
+                        {% if error_code is defined and error_code == 404 %}
+                            <li>Verifica che l'URL sia corretto</li>
+                            <li>Torna alla pagina principale e riprova</li>
+                            <li>Usa la funzione di ricerca per trovare cio che cerchi</li>
+                        {% elif error_code is defined and error_code == 503 %}
+                            <li>Verifica che Elasticsearch sia in esecuzione</li>
+                            <li>Controlla la connessione di rete</li>
+                            <li>Riprova tra qualche secondo</li>
+                        {% else %}
+                            <li>Ricarica la pagina</li>
+                            <li>Svuota la cache del browser</li>
+                            <li>Verifica che tutti i servizi siano attivi</li>
+                            <li>Contatta l'amministratore se il problema persiste</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <div class="action-buttons">
+                    <a href="/" class="btn-primary-custom">
+                        <i class="bi bi-house"></i> Torna alla Home
+                    </a>
+                    <a href="javascript:location.reload()" class="btn-secondary-custom">
+                        <i class="bi bi-arrow-clockwise"></i> Ricarica
+                    </a>
+                </div>
+                
+                {% if details is defined and details %}
+                    <div class="error-details">
+                        <details>
+                            <summary><i class="bi bi-code-slash"></i> Dettagli tecnici</summary>
+                            <pre>{{ details }}</pre>
+                        </details>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="footer-text">
+            <p>Scientific Paper Search - Ingegneria dei Dati 2025/2026</p>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
