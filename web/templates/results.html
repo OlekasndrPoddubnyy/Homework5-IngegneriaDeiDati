@@ -541,9 +541,9 @@
                        value="{{ query if query else '' }}"
                        placeholder="Modifica la tua ricerca...">
                 <select name="type" class="form-control" style="max-width: 150px;">
-                    <option value="papers" {% if search_type == 'papers' %}selected{% endif %}>Articoli</option>
-                    <option value="tables" {% if search_type == 'tables' %}selected{% endif %}>Tabelle</option>
-                    <option value="figures" {% if search_type == 'figures' %}selected{% endif %}>Figure</option>
+                    <option value="papers" {% if doc_type == 'papers' %}selected{% endif %}>Articoli</option>
+                    <option value="tables" {% if doc_type == 'tables' %}selected{% endif %}>Tabelle</option>
+                    <option value="figures" {% if doc_type == 'figures' %}selected{% endif %}>Figure</option>
                 </select>
                 <button type="submit" class="btn btn-search">
                     <i class="bi bi-search"></i> Cerca
@@ -573,7 +573,7 @@
                         <i class="bi bi-search"></i>
                     </div>
                     <h4>Nessun risultato trovato</h4>
-                    <p>Non sono stati trovati risultati per "<strong>{{ query }}</strong>" nella categoria <strong>{{ search_type }}</strong>.</p>
+                    <p>Non sono stati trovati risultati per "<strong>{{ query }}</strong>" nella categoria <strong>{{ doc_type }}</strong>.</p>
                     <div class="suggestions">
                         <h6><i class="bi bi-lightbulb"></i> Suggerimenti:</h6>
                         <ul>
@@ -597,15 +597,15 @@
                 </div>
                 <div class="filter-pills">
                     <a href="/search?q={{ query }}&type=papers" 
-                       class="filter-pill {% if search_type == 'papers' %}active{% endif %}">
+                       class="filter-pill {% if doc_type == 'papers' %}active{% endif %}">
                         <i class="bi bi-file-earmark-text"></i> Articoli
                     </a>
                     <a href="/search?q={{ query }}&type=tables" 
-                       class="filter-pill {% if search_type == 'tables' %}active{% endif %}">
+                       class="filter-pill {% if doc_type == 'tables' %}active{% endif %}">
                         <i class="bi bi-table"></i> Tabelle
                     </a>
                     <a href="/search?q={{ query }}&type=figures" 
-                       class="filter-pill {% if search_type == 'figures' %}active{% endif %}">
+                       class="filter-pill {% if doc_type == 'figures' %}active{% endif %}">
                         <i class="bi bi-image"></i> Figure
                     </a>
                 </div>
@@ -616,23 +616,23 @@
                     <div class="result-card" style="animation-delay: {{ loop.index0 * 0.05 }}s;">
                         <div class="result-header">
                             <h3 class="result-title">
-                                {% if search_type == 'papers' %}
-                                    <a href="/paper/{{ result._id }}">
-                                        {{ result._source.title if result._source.title else 'Titolo non disponibile' }}
+                                {% if doc_type == 'papers' %}
+                                    <a href="/paper/{{ result.id }}">
+                                        {{ result.source.title if result.source.title else 'Titolo non disponibile' }}
                                     </a>
-                                {% elif search_type == 'tables' %}
-                                    {{ result._source.caption if result._source.caption else 'Tabella senza titolo' }}
+                                {% elif doc_type == 'tables' %}
+                                    {{ result.source.caption if result.source.caption else 'Tabella senza titolo' }}
                                 {% else %}
-                                    {{ result._source.caption if result._source.caption else 'Figura senza titolo' }}
+                                    {{ result.source.caption if result.source.caption else 'Figura senza titolo' }}
                                 {% endif %}
                             </h3>
                             <span class="result-badge 
-                                {% if search_type == 'papers' %}badge-paper
-                                {% elif search_type == 'tables' %}badge-table
+                                {% if doc_type == 'papers' %}badge-paper
+                                {% elif doc_type == 'tables' %}badge-table
                                 {% else %}badge-figure{% endif %}">
-                                {% if search_type == 'papers' %}
+                                {% if doc_type == 'papers' %}
                                     <i class="bi bi-file-earmark-text"></i> Articolo
-                                {% elif search_type == 'tables' %}
+                                {% elif doc_type == 'tables' %}
                                     <i class="bi bi-table"></i> Tabella
                                 {% else %}
                                     <i class="bi bi-image"></i> Figura
@@ -641,56 +641,56 @@
                         </div>
                         
                         <div class="result-meta">
-                            {% if search_type == 'papers' %}
-                                {% if result._source.authors %}
+                            {% if doc_type == 'papers' %}
+                                {% if result.source.authors %}
                                     <div class="result-meta-item">
                                         <i class="bi bi-people"></i>
-                                        {{ result._source.authors[:100] }}{% if result._source.authors|length > 100 %}...{% endif %}
+                                        {{ result.source.authors[:100] }}{% if result.source.authors|length > 100 %}...{% endif %}
                                     </div>
                                 {% endif %}
-                                {% if result._source.publication_date %}
+                                {% if result.source.date %}
                                     <div class="result-meta-item">
                                         <i class="bi bi-calendar3"></i>
-                                        {{ result._source.publication_date }}
+                                        {{ result.source.date }}
                                     </div>
                                 {% endif %}
-                                {% if result._source.source %}
+                                {% if result.source.source %}
                                     <div class="result-meta-item">
                                         <i class="bi bi-journal"></i>
-                                        {{ result._source.source }}
+                                        {{ result.source.source }}
                                     </div>
                                 {% endif %}
                             {% else %}
-                                {% if result._source.paper_id %}
+                                {% if result.source.paper_id %}
                                     <div class="result-meta-item">
                                         <i class="bi bi-link-45deg"></i>
-                                        Paper ID: {{ result._source.paper_id }}
+                                        Paper ID: {{ result.source.paper_id }}
                                     </div>
                                 {% endif %}
-                                {% if result._source.section %}
+                                {% if result.source.section %}
                                     <div class="result-meta-item">
                                         <i class="bi bi-bookmark"></i>
-                                        Sezione: {{ result._source.section }}
+                                        Sezione: {{ result.source.section }}
                                     </div>
                                 {% endif %}
                             {% endif %}
                         </div>
                         
-                        {% if search_type == 'papers' and result._source.abstract %}
+                        {% if doc_type == 'papers' and result.source.abstract %}
                             <div class="result-abstract">
-                                {{ result._source.abstract[:350] }}{% if result._source.abstract|length > 350 %}...{% endif %}
+                                {{ result.source.abstract[:350] }}{% if result.source.abstract|length > 350 %}...{% endif %}
                             </div>
-                        {% elif search_type == 'tables' and result._source.content %}
+                        {% elif doc_type == 'tables' and result.source.body %}
                             <div class="result-table-preview">
                                 <small class="text-muted">Anteprima contenuto:</small>
                                 <div style="max-height: 150px; overflow: hidden; margin-top: 10px;">
-                                    {{ result._source.content[:500] }}{% if result._source.content|length > 500 %}...{% endif %}
+                                    {{ result.source.body[:500] }}{% if result.source.body|length > 500 %}...{% endif %}
                                 </div>
                             </div>
-                        {% elif search_type == 'figures' %}
+                        {% elif doc_type == 'figures' %}
                             <div class="result-figure-preview">
-                                {% if result._source.url %}
-                                    <img src="{{ result._source.url }}" alt="{{ result._source.caption }}" 
+                                {% if result.source.url %}
+                                    <img src="{{ result.source.url }}" alt="{{ result.source.caption }}" 
                                          onerror="this.src='https://via.placeholder.com/200x150?text=Immagine+non+disponibile'">
                                 {% else %}
                                     <i class="bi bi-image" style="font-size: 3rem; color: #ccc;"></i>
@@ -703,17 +703,17 @@
                             <div class="result-score">
                                 <span>Rilevanza:</span>
                                 <div class="score-bar">
-                                    {% set score_percent = (result._score / (results[0]._score if results else 1) * 100)|round|int %}
+                                    {% set score_percent = (result.score / (results[0].score if results else 1) * 100)|round|int %}
                                     <div class="score-fill" style="width: {{ score_percent }}%;"></div>
                                 </div>
-                                <span>{{ "%.2f"|format(result._score) }}</span>
+                                <span>{{ "%.2f"|format(result.score) }}</span>
                             </div>
-                            {% if search_type == 'papers' %}
-                                <a href="/paper/{{ result._id }}" class="btn-detail">
+                            {% if doc_type == 'papers' %}
+                                <a href="/paper/{{ result.id }}" class="btn-detail">
                                     Vedi Dettagli <i class="bi bi-arrow-right"></i>
                                 </a>
-                            {% elif result._source.paper_id %}
-                                <a href="/paper/{{ result._source.paper_id }}" class="btn-detail">
+                            {% elif result.source.paper_id %}
+                                <a href="/paper/{% if result.source.paper_id.startswith('PMC') %}pubmed_{{ result.source.paper_id }}{% else %}arxiv_{{ result.source.paper_id }}{% endif %}" class="btn-detail">
                                     Vedi Articolo <i class="bi bi-arrow-right"></i>
                                 </a>
                             {% endif %}

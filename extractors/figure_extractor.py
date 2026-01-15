@@ -16,8 +16,11 @@ import re
 from typing import Dict, List, Optional, Set
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
+from lxml import html as lxml_html
+from lxml import etree
 from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
 # Aggiungi il path principale al PYTHONPATH
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -55,14 +58,18 @@ class FigureExtractor:
         Returns:
             Lista di figure estratte con contesto
         """
-        soup = BeautifulSoup(html_content, 'lxml')
+        # Usa lxml per compatibilità con Python 3.14
+        try:
+            doc = lxml_html.fromstring(html_content)
+        except Exception:
+            return []
         figures = []
         
         # Estrai tutti i paragrafi per il contesto
-        paragraphs = self._extract_paragraphs(soup)
+        paragraphs = self._extract_paragraphs(doc)
         
         # Metodo 1: Cerca elementi <figure>
-        figure_elements = soup.find_all('figure')
+        figure_elements = doc.xpath('//figure')
         
         for idx, fig_elem in enumerate(figure_elements, 1):
             figure_data = self._extract_figure_data(
@@ -74,21 +81,21 @@ class FigureExtractor:
         # Metodo 2: Cerca immagini con caption (se non abbiamo trovato figure)
         if not figures:
             figures = self._extract_from_images(
-                soup, paper_id, source, paragraphs, base_url
+                doc, paper_id, source, paragraphs, base_url
             )
         
         return figures
     
-    def _extract_paragraphs(self, soup: BeautifulSoup) -> List[Dict]:
+    def _extract_paragraphs(self, doc) -> List[Dict]:
         """Estrae tutti i paragrafi dal documento."""
         paragraphs = []
         
-        p_elements = soup.find_all(['p', 'div'], class_=lambda x: x and 'para' in str(x).lower())
+        p_elements = doc.xpath('//p[contains(@class, "para")] | //div[contains(@class, "para")]')
         if not p_elements:
-            p_elements = soup.find_all('p')
+            p_elements = doc.xpath('//p')
         
         for idx, p in enumerate(p_elements):
-            text = p.get_text(separator=' ', strip=True)
+            text = ' '.join(p.text_content().split())
             if len(text) > 20:
                 paragraphs.append({
                     'index': idx,
@@ -110,14 +117,14 @@ class FigureExtractor:
         """Estrae i dati di una singola figura."""
         
         # Trova l'immagine
-        img = fig_elem.find('img')
+        img_list = fig_elem.xpath('.//img')
+        img = img_list[0] if img_list else None
         if not img:
             # Prova a cercare un'immagine in un link
-            link = fig_elem.find('a')
-            if link:
-                img = link.find('img')
+            link_list = fig_elem.xpath('.//a//img')
+            img = link_list[0] if link_list else None
         
-        if not img:
+        if img is None:
             return None
         
         # Estrai l'URL dell'immagine
@@ -155,7 +162,7 @@ class FigureExtractor:
     
     def _extract_from_images(
         self,
-        soup: BeautifulSoup,
+        doc,
         paper_id: str,
         source: str,
         paragraphs: List[Dict],
@@ -165,7 +172,7 @@ class FigureExtractor:
         figures = []
         
         # Cerca tutte le immagini
-        images = soup.find_all('img')
+        images = doc.xpath('//img')
         
         position = 0
         for img in images:
@@ -217,35 +224,38 @@ class FigureExtractor:
     def _extract_caption(self, fig_elem) -> str:
         """Estrae la caption della figura."""
         # Cerca figcaption
-        figcaption = fig_elem.find('figcaption')
+        figcaption = fig_elem.xpath('.//figcaption')
         if figcaption:
-            return figcaption.get_text(separator=' ', strip=True)
+            return ' '.join(figcaption[0].text_content().split())
         
         # Cerca elementi con classe caption
-        caption_elem = fig_elem.find(class_=lambda x: x and 'caption' in str(x).lower())
+        caption_elem = fig_elem.xpath('.//*[contains(@class, "caption")]')
         if caption_elem:
-            return caption_elem.get_text(separator=' ', strip=True)
+            return ' '.join(caption_elem[0].text_content().split())
         
         # Cerca testo dopo l'immagine
-        img = fig_elem.find('img')
-        if img:
-            next_text = img.find_next(['p', 'span', 'div'])
-            if next_text and next_text.parent == fig_elem:
-                text = next_text.get_text(strip=True)
-                if re.match(r'^(Figure|Fig\.?)\s*\d+', text, re.IGNORECASE):
-                    return text
+        img_list = fig_elem.xpath('.//img')
+        if img_list:
+            try:
+                next_text = fig_elem.xpath('.//p | .//span | .//div')
+                for elem in next_text:
+                    text = ' '.join(elem.text_content().split())
+                    if re.match(r'^(Figure|Fig\.?)\s*\d+', text, re.IGNORECASE):
+                        return text
+            except Exception:
+                pass
         
         return ""
     
     def _find_image_caption(self, img) -> str:
         """Cerca la caption di un'immagine standalone."""
         # Cerca nel parent
-        parent = img.parent
-        if parent:
+        parent = img.getparent()
+        if parent is not None:
             # Cerca testo seguente
-            next_elem = img.find_next(['p', 'span', 'div', 'figcaption'])
-            if next_elem:
-                text = next_elem.get_text(strip=True)
+            next_elems = img.xpath('following-sibling::*[self::p or self::span or self::div or self::figcaption][1]')
+            if next_elems:
+                text = ' '.join(next_elems[0].text_content().split())
                 if len(text) < 500:  # Non troppo lungo
                     return text
             
@@ -355,26 +365,28 @@ class FigureExtractor:
         return count
     
     def process_pubmed_articles(self) -> int:
-        """Processa tutti gli articoli PubMed."""
-        html_files = [f for f in os.listdir(PUBMED_DATA_DIR) if f.endswith('.html')]
+        """Processa tutti gli articoli PubMed (HTML o XML)."""
+        # Cerca sia file HTML che XML
+        all_files = [f for f in os.listdir(PUBMED_DATA_DIR) 
+                     if f.endswith('.html') or f.endswith('.xml')]
         
-        if not html_files:
-            print("[WARN] Nessun file HTML trovato in PubMed")
+        if not all_files:
+            print("[WARN] Nessun file HTML/XML trovato in PubMed")
             return 0
         
         count = 0
-        print(f"\n[INFO] Elaborazione {len(html_files)} articoli PubMed...")
+        print(f"\n[INFO] Elaborazione {len(all_files)} articoli PubMed...")
         
-        for filename in tqdm(html_files, desc="Estrazione figure PubMed"):
+        for filename in tqdm(all_files, desc="Estrazione figure PubMed"):
             filepath = os.path.join(PUBMED_DATA_DIR, filename)
-            paper_id = filename.replace('.html', '')
+            paper_id = filename.replace('.html', '').replace('.xml', '')
             
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
-                    html_content = f.read()
+                    content = f.read()
                 
                 base_url = f"{PUBMED_BASE_URL}/articles/{paper_id}/"
-                figures = self.extract_from_html(html_content, paper_id, "pubmed", base_url)
+                figures = self.extract_from_html(content, paper_id, "pubmed", base_url)
                 self.figures.extend(figures)
                 count += len(figures)
                 

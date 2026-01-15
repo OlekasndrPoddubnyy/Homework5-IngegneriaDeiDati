@@ -5,6 +5,7 @@ Studente Lavoratore - Keywords: "Query processing" / "Query optimization"
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,7 +50,7 @@ PUBMED_MIN_ARTICLES = 500
 
 # ============== SCRAPING CONFIG ==============
 REQUEST_DELAY = 1.5  # Delay tra richieste (secondi) per rispettare rate limits
-REQUEST_TIMEOUT = 30  # Timeout per richieste HTTP
+REQUEST_TIMEOUT = 15  # Timeout per richieste HTTP (ridotto per evitare blocchi)
 MAX_RETRIES = 3  # Numero massimo di tentativi per richiesta
 
 # Headers per le richieste HTTP
@@ -61,16 +62,17 @@ HEADERS = {
 }
 
 # ============== DATA DIRECTORIES ==============
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-ARXIV_DATA_DIR = os.path.join(DATA_DIR, "arxiv")
-PUBMED_DATA_DIR = os.path.join(DATA_DIR, "pubmed")
-TABLES_DIR = os.path.join(DATA_DIR, "tables")
-FIGURES_DIR = os.path.join(DATA_DIR, "figures")
+BASE_DIR = Path(__file__).parent
+DATA_DIR = BASE_DIR / "data"
+PAPERS_DIR = DATA_DIR / "papers"
+ARXIV_DATA_DIR = DATA_DIR / "arxiv"
+PUBMED_DATA_DIR = DATA_DIR / "pubmed"
+TABLES_DIR = DATA_DIR / "tables"
+FIGURES_DIR = DATA_DIR / "figures"
 
 # Crea le directory se non esistono
-for directory in [DATA_DIR, ARXIV_DATA_DIR, PUBMED_DATA_DIR, TABLES_DIR, FIGURES_DIR]:
-    os.makedirs(directory, exist_ok=True)
+for directory in [DATA_DIR, PAPERS_DIR, ARXIV_DATA_DIR, PUBMED_DATA_DIR, TABLES_DIR, FIGURES_DIR]:
+    directory.mkdir(parents=True, exist_ok=True)
 
 # ============== STOPWORDS (termini non informativi) ==============
 STOPWORDS_IT = {

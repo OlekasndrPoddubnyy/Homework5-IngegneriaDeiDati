@@ -50,12 +50,17 @@ class FigureIndexer:
     
     def prepare_document(self, figure: Dict) -> Dict:
         """Prepara un documento figura per l'indicizzazione."""
+        paper_id = figure['paper_id']
+        # Determina la fonte dal paper_id
+        source = "pubmed" if paper_id.startswith("PMC") else "arxiv"
+        
         return {
             "_index": INDEX_FIGURES,
             "_id": figure['figure_id'],
             "_source": {
                 "figure_id": figure['figure_id'],
-                "paper_id": figure['paper_id'],
+                "paper_id": paper_id,
+                "source": source,
                 "url": figure.get('url', ''),
                 "caption": figure.get('caption', ''),
                 "mentions": '\n\n'.join(figure.get('mentions', [])),

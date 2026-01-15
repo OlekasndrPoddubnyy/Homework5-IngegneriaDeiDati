@@ -2,21 +2,21 @@
 # Ingegneria dei Dati 2025/2026 - Homework 5
 
 # Web Scraping
-requests==2.31.0
-beautifulsoup4==4.12.3
-lxml==5.1.0
-selenium==4.18.1
+requests>=2.31.0
+beautifulsoup4>=4.12.3
+lxml>=5.1.0
+selenium>=4.18.1
 
 # Elasticsearch
-elasticsearch==8.12.1
+elasticsearch>=8.12.1
 
 # Data Processing
-pandas==2.2.0
-numpy==1.26.4
+pandas>=2.2.0
+numpy>=1.26.4
 
 # NLP & Text Processing
-nltk==3.8.1
-spacy==3.7.4
+nltk>=3.8.1
+spacy>=3.7.4
 
 # Web Interface
 flask==3.0.2

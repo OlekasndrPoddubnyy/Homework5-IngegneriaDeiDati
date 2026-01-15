@@ -1,6 +1,8 @@
 """
-Scraper per arXiv - Recupera articoli in formato HTML.
+Scraper per arXiv - Usa l'API ufficiale (non scraping HTML).
 Keywords: "Query processing" / "Query optimization"
+
+API Docs: https://info.arxiv.org/help/api/user-manual.html
 
 Ingegneria dei Dati 2025/2026 - Homework 5
 """
@@ -12,23 +14,41 @@ import time
 import re
 from datetime import datetime
 from typing import Dict, List, Optional
-from urllib.parse import urljoin, quote_plus
+from urllib.parse import quote_plus
+import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 import requests
-from bs4 import BeautifulSoup
 from tqdm import tqdm
+
+# Ignora warning BeautifulSoup per XML
+import warnings
+from bs4 import XMLParsedAsHTMLWarning
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 # Aggiungi il path principale al PYTHONPATH
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
-    ARXIV_BASE_URL, ARXIV_SEARCH_URL, ARXIV_KEYWORDS,
-    ARXIV_DATA_DIR, HEADERS, REQUEST_DELAY, REQUEST_TIMEOUT, MAX_RETRIES
+    ARXIV_KEYWORDS, ARXIV_DATA_DIR, HEADERS, REQUEST_DELAY, REQUEST_TIMEOUT, MAX_RETRIES
 )
+
+# API ufficiale arXiv
+ARXIV_API_URL = "https://export.arxiv.org/api/query"
+
+# Numero di thread per il download parallelo (ridotto per evitare rate limit)
+MAX_WORKERS = 3
+
+# Namespace per parsing XML Atom
+NAMESPACES = {
+    'atom': 'http://www.w3.org/2005/Atom',
+    'arxiv': 'http://arxiv.org/schemas/atom'
+}
 
 
 class ArxivScraper:
     """
-    Scraper per recuperare articoli da arXiv in formato HTML.
+    Scraper per recuperare articoli da arXiv tramite API ufficiale.
     Cerca articoli il cui titolo o abstract contiene le keywords specificate.
     """
     
@@ -36,11 +56,11 @@ class ArxivScraper:
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
         self.articles: List[Dict] = []
-        self.articles_metadata_file = os.path.join(ARXIV_DATA_DIR, "articles_metadata.json")
+        self.articles_metadata_file = os.path.join(str(ARXIV_DATA_DIR), "articles_metadata.json")
     
     def search_articles(self, query: str, max_results: int = 200) -> List[Dict]:
         """
-        Cerca articoli su arXiv per una query specifica.
+        Cerca articoli su arXiv tramite API ufficiale.
         
         Args:
             query: La query di ricerca
@@ -51,43 +71,46 @@ class ArxivScraper:
         """
         articles = []
         start = 0
-        size = 50  # Risultati per pagina
+        batch_size = 100  # Max consentito dall'API
         
-        print(f"\n[INFO] Ricerca articoli per: '{query}'")
+        print(f"\n[INFO] Ricerca articoli via API per: '{query}'")
         
         with tqdm(total=max_results, desc="Ricerca articoli") as pbar:
             while len(articles) < max_results:
-                # Costruisci URL di ricerca
-                search_url = (
-                    f"{ARXIV_SEARCH_URL}?searchtype=all&query={quote_plus(query)}"
-                    f"&start={start}&size={size}"
-                )
+                # Costruisci query per l'API
+                # Cerca nel titolo E nell'abstract
+                search_query = f'all:"{query}"'
+                
+                params = {
+                    'search_query': search_query,
+                    'start': start,
+                    'max_results': min(batch_size, max_results - len(articles)),
+                    'sortBy': 'relevance',
+                    'sortOrder': 'descending'
+                }
                 
                 try:
-                    response = self._make_request(search_url)
+                    response = self._make_request(ARXIV_API_URL, params=params)
                     if response is None:
                         break
                     
-                    soup = BeautifulSoup(response.text, 'lxml')
+                    # Parse XML response
+                    batch_articles = self._parse_api_response(response.text)
                     
-                    # Trova tutti i risultati
-                    results = soup.find_all('li', class_='arxiv-result')
-                    
-                    if not results:
-                        print(f"\n[WARN] Nessun altro risultato trovato dopo {len(articles)} articoli")
+                    if not batch_articles:
+                        print(f"\n[INFO] Nessun altro risultato dopo {len(articles)} articoli")
                         break
                     
-                    for result in results:
+                    for article in batch_articles:
                         if len(articles) >= max_results:
                             break
-                        
-                        article = self._parse_search_result(result)
-                        if article:
-                            articles.append(article)
-                            pbar.update(1)
+                        articles.append(article)
+                        pbar.update(1)
                     
-                    start += size
-                    time.sleep(REQUEST_DELAY)
+                    start += batch_size
+                    
+                    # Rispetta rate limit API (3 secondi tra richieste)
+                    time.sleep(3)
                     
                 except Exception as e:
                     print(f"\n[ERROR] Errore durante la ricerca: {e}")
@@ -95,60 +118,97 @@ class ArxivScraper:
         
         return articles
     
-    def _parse_search_result(self, result) -> Optional[Dict]:
-        """Estrae i metadati di un articolo dal risultato di ricerca."""
+    def _parse_api_response(self, xml_content: str) -> List[Dict]:
+        """Parse la risposta XML dell'API arXiv."""
+        articles = []
+        
         try:
-            # ID articolo
-            arxiv_id_elem = result.find('p', class_='list-title')
-            if not arxiv_id_elem:
+            root = ET.fromstring(xml_content)
+            
+            for entry in root.findall('atom:entry', NAMESPACES):
+                article = self._parse_entry(entry)
+                if article:
+                    articles.append(article)
+                    
+        except ET.ParseError as e:
+            print(f"\n[ERROR] Errore parsing XML: {e}")
+        
+        return articles
+    
+    def _parse_entry(self, entry) -> Optional[Dict]:
+        """Estrae i metadati da un entry Atom."""
+        try:
+            # ID (es: http://arxiv.org/abs/2301.12345v1)
+            id_elem = entry.find('atom:id', NAMESPACES)
+            if id_elem is None:
                 return None
             
-            arxiv_id_link = arxiv_id_elem.find('a')
-            if not arxiv_id_link:
-                return None
-            
-            arxiv_id = arxiv_id_link.text.strip().replace('arXiv:', '')
+            full_id = id_elem.text
+            # Estrai solo l'ID (es: 2301.12345v1)
+            arxiv_id = full_id.split('/abs/')[-1] if '/abs/' in full_id else full_id
+            # Rimuovi versione per ID base
+            arxiv_id_base = re.sub(r'v\d+$', '', arxiv_id)
             
             # Titolo
-            title_elem = result.find('p', class_='title')
-            title = title_elem.text.strip() if title_elem else "No title"
+            title_elem = entry.find('atom:title', NAMESPACES)
+            title = title_elem.text.strip().replace('\n', ' ') if title_elem is not None else "No title"
+            title = re.sub(r'\s+', ' ', title)
             
             # Autori
-            authors_elem = result.find('p', class_='authors')
             authors = []
-            if authors_elem:
-                author_links = authors_elem.find_all('a')
-                authors = [a.text.strip() for a in author_links]
+            for author in entry.findall('atom:author', NAMESPACES):
+                name_elem = author.find('atom:name', NAMESPACES)
+                if name_elem is not None:
+                    authors.append(name_elem.text.strip())
             
             # Abstract
-            abstract_elem = result.find('span', class_='abstract-full')
-            if not abstract_elem:
-                abstract_elem = result.find('p', class_='abstract')
+            summary_elem = entry.find('atom:summary', NAMESPACES)
             abstract = ""
-            if abstract_elem:
-                abstract = abstract_elem.text.strip()
-                # Rimuovi "Less" button text se presente
-                abstract = abstract.replace('△ Less', '').strip()
+            if summary_elem is not None and summary_elem.text:
+                abstract = summary_elem.text.strip().replace('\n', ' ')
+                abstract = re.sub(r'\s+', ' ', abstract)
             
-            # Data
-            submitted_elem = result.find('p', class_='is-size-7')
+            # Data pubblicazione
+            published_elem = entry.find('atom:published', NAMESPACES)
             date = ""
-            if submitted_elem:
-                date_match = re.search(r'Submitted\s+(\d+\s+\w+,\s+\d{4})', submitted_elem.text)
-                if date_match:
-                    date = date_match.group(1)
+            if published_elem is not None:
+                date = published_elem.text[:10]  # YYYY-MM-DD
             
-            # URL dell'articolo HTML
-            html_url = f"https://arxiv.org/html/{arxiv_id}"
-            pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
-            abs_url = f"https://arxiv.org/abs/{arxiv_id}"
+            # Data ultimo aggiornamento
+            updated_elem = entry.find('atom:updated', NAMESPACES)
+            updated = ""
+            if updated_elem is not None:
+                updated = updated_elem.text[:10]
+            
+            # Categorie
+            categories = []
+            for category in entry.findall('atom:category', NAMESPACES):
+                term = category.get('term')
+                if term:
+                    categories.append(term)
+            
+            # Link PDF
+            pdf_url = ""
+            for link in entry.findall('atom:link', NAMESPACES):
+                if link.get('title') == 'pdf':
+                    pdf_url = link.get('href', '')
+                    break
+            
+            if not pdf_url:
+                pdf_url = f"https://arxiv.org/pdf/{arxiv_id_base}.pdf"
+            
+            # URL
+            html_url = f"https://arxiv.org/html/{arxiv_id_base}"
+            abs_url = f"https://arxiv.org/abs/{arxiv_id_base}"
             
             return {
-                'arxiv_id': arxiv_id,
+                'arxiv_id': arxiv_id_base,
                 'title': title,
                 'authors': authors,
                 'abstract': abstract,
                 'date': date,
+                'updated': updated,
+                'categories': categories,
                 'html_url': html_url,
                 'pdf_url': pdf_url,
                 'abs_url': abs_url,
@@ -156,18 +216,18 @@ class ArxivScraper:
             }
             
         except Exception as e:
-            print(f"\n[WARN] Errore parsing risultato: {e}")
+            print(f"\n[WARN] Errore parsing entry: {e}")
             return None
     
     def download_html_article(self, article: Dict) -> Optional[str]:
         """
-        Scarica il contenuto HTML completo di un articolo.
+        Scarica il contenuto HTML completo di un articolo (se disponibile).
         
         Args:
             article: Dizionario con i metadati dell'articolo
             
         Returns:
-            Contenuto HTML dell'articolo o None se non disponibile
+            Path del file HTML o None se non disponibile
         """
         html_url = article['html_url']
         arxiv_id = article['arxiv_id'].replace('/', '_')
@@ -175,34 +235,78 @@ class ArxivScraper:
         try:
             response = self._make_request(html_url)
             
-            if response is None:
+            if response is None or response.status_code != 200:
                 return None
             
-            if response.status_code == 404:
-                # L'articolo potrebbe non essere disponibile in HTML
+            # Verifica se è una pagina HTML valida (non redirect a PDF)
+            content_type = response.headers.get('Content-Type', '')
+            if 'text/html' not in content_type:
                 return None
             
+            from bs4 import BeautifulSoup
             soup = BeautifulSoup(response.text, 'lxml')
             
-            # Verifica se è una pagina valida
+            # Verifica se è una pagina valida con contenuto
             if soup.find('div', class_='ltx_page_content') or soup.find('article'):
                 # Salva l'HTML
-                html_file = os.path.join(ARXIV_DATA_DIR, f"{arxiv_id}.html")
+                html_file = os.path.join(str(ARXIV_DATA_DIR), f"{arxiv_id}.html")
                 with open(html_file, 'w', encoding='utf-8') as f:
                     f.write(response.text)
                 
-                # Estrai il testo completo
+                # Estrai il testo completo e salvalo nell'articolo
                 full_text = self._extract_full_text(soup)
+                article['full_text'] = full_text
+                article['html_available'] = True
                 
-                return full_text
-            else:
-                return None
+                return html_file
+            
+            return None
                 
         except Exception as e:
-            print(f"\n[WARN] Errore download {arxiv_id}: {e}")
             return None
     
-    def _extract_full_text(self, soup: BeautifulSoup) -> str:
+    def download_articles_parallel(self, articles: List[Dict], max_workers: int = MAX_WORKERS) -> List[Dict]:
+        """
+        Scarica articoli in parallelo usando ThreadPoolExecutor.
+        
+        Args:
+            articles: Lista di articoli da scaricare
+            max_workers: Numero di thread paralleli
+            
+        Returns:
+            Lista di articoli aggiornati
+        """
+        print(f"\n[INFO] Download parallelo con {max_workers} thread...")
+        
+        successful = 0
+        failed = 0
+        lock = threading.Lock()
+        
+        def download_one(article):
+            nonlocal successful, failed
+            result = self.download_html_article(article)
+            time.sleep(1)  # Rate limit: 1 secondo tra richieste
+            with lock:
+                if result:
+                    article['html_path'] = result
+                    successful += 1
+                else:
+                    article['full_text'] = article.get('abstract', '')
+                    article['html_available'] = False
+                    failed += 1
+            return article
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(download_one, art): art for art in articles}
+            
+            with tqdm(total=len(articles), desc="Download HTML") as pbar:
+                for future in as_completed(futures):
+                    pbar.update(1)
+        
+        print(f"[OK] Download completato: {successful} con HTML, {failed} solo abstract")
+        return articles
+    
+    def _extract_full_text(self, soup) -> str:
         """Estrae il testo completo dall'HTML dell'articolo."""
         # Rimuovi script e style
         for element in soup(['script', 'style', 'nav', 'header', 'footer']):
@@ -223,20 +327,27 @@ class ArxivScraper:
         
         return ""
     
-    def _make_request(self, url: str, retries: int = MAX_RETRIES) -> Optional[requests.Response]:
+    def _make_request(self, url: str, params: dict = None, retries: int = MAX_RETRIES) -> Optional[requests.Response]:
         """Effettua una richiesta HTTP con retry."""
         for attempt in range(retries):
             try:
-                response = self.session.get(url, timeout=REQUEST_TIMEOUT)
-                response.raise_for_status()
-                return response
-            except requests.exceptions.HTTPError as e:
-                if response.status_code == 404:
-                    return response  # 404 è gestito dal chiamante
-                if attempt < retries - 1:
-                    time.sleep(REQUEST_DELAY * (attempt + 1))
+                response = self.session.get(url, params=params, timeout=REQUEST_TIMEOUT)
+                
+                if response.status_code == 200:
+                    return response
+                elif response.status_code == 404:
+                    return response  # 404 gestito dal chiamante
                 else:
-                    raise
+                    response.raise_for_status()
+                    
+            except requests.exceptions.HTTPError as e:
+                if attempt < retries - 1:
+                    wait_time = REQUEST_DELAY * (attempt + 1)
+                    print(f"\n[WARN] Retry {attempt + 1}/{retries} dopo {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"\n[ERROR] Richiesta fallita: {e}")
+                    return None
             except requests.exceptions.RequestException as e:
                 if attempt < retries - 1:
                     time.sleep(REQUEST_DELAY * (attempt + 1))
@@ -253,7 +364,7 @@ class ArxivScraper:
             max_per_keyword: Numero massimo di articoli per keyword
         """
         print("=" * 60)
-        print("arXiv Scraper - Ingegneria dei Dati Homework 5")
+        print("arXiv Scraper (API) - Ingegneria dei Dati Homework 5")
         print("=" * 60)
         print(f"Keywords: {ARXIV_KEYWORDS}")
         print(f"Max articoli per keyword: {max_per_keyword}")
@@ -273,8 +384,8 @@ class ArxivScraper:
         
         print(f"\n[INFO] Trovati {len(all_articles)} articoli unici")
         
-        # Scarica gli articoli HTML
-        print("\n[INFO] Download articoli HTML...")
+        # Scarica gli articoli HTML (opzionale, molti non hanno HTML)
+        print("\n[INFO] Tentativo download HTML (se disponibile)...")
         html_available = 0
         
         with tqdm(total=len(all_articles), desc="Download HTML") as pbar:
@@ -290,7 +401,7 @@ class ArxivScraper:
                     article['html_available'] = False
                 
                 pbar.update(1)
-                time.sleep(REQUEST_DELAY)
+                time.sleep(0.5)  # Rate limit gentile per HTML
         
         self.articles = all_articles
         

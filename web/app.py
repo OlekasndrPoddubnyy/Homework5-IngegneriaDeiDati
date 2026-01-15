@@ -341,22 +341,26 @@ def view_paper(paper_id):
         source = result['_source']
         
         # Cerca tabelle e figure associate
-        tables = es.search(
+        tables_response = es.search(
             index=INDEX_TABLES,
             body={"query": {"term": {"paper_id": paper_id}}, "size": 100}
         )
         
-        figures = es.search(
+        figures_response = es.search(
             index=INDEX_FIGURES,
             body={"query": {"term": {"paper_id": paper_id}}, "size": 100}
         )
+        
+        # Formatta tabelle e figure per il template
+        tables = [hit['_source'] for hit in tables_response['hits']['hits']]
+        figures = [hit['_source'] for hit in figures_response['hits']['hits']]
         
         return render_template(
             'paper_detail.html',
             paper=source,
             paper_id=paper_id,
-            tables=tables['hits']['hits'],
-            figures=figures['hits']['hits']
+            tables=tables,
+            figures=figures
         )
     except Exception as e:
         return render_template('error.html', error=str(e)), 404

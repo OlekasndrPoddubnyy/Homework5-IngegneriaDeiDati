@@ -16,8 +16,11 @@ import re
 from typing import Dict, List, Optional, Set
 from collections import defaultdict
 
-from bs4 import BeautifulSoup
+from lxml import html as lxml_html
+from lxml import etree
 from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
 # Aggiungi il path principale al PYTHONPATH
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -47,14 +50,18 @@ class TableExtractor:
         Returns:
             Lista di tabelle estratte con contesto
         """
-        soup = BeautifulSoup(html_content, 'lxml')
+        # Usa lxml per compatibilità con Python 3.14
+        try:
+            doc = lxml_html.fromstring(html_content)
+        except Exception:
+            return []
         tables = []
         
         # Estrai tutti i paragrafi per il contesto
-        paragraphs = self._extract_paragraphs(soup)
+        paragraphs = self._extract_paragraphs(doc)
         
         # Trova tutte le tabelle
-        table_elements = soup.find_all('table')
+        table_elements = doc.xpath('//table')
         
         for idx, table_elem in enumerate(table_elements, 1):
             table_data = self._extract_table_data(
@@ -69,17 +76,17 @@ class TableExtractor:
         
         return tables
     
-    def _extract_paragraphs(self, soup: BeautifulSoup) -> List[Dict]:
+    def _extract_paragraphs(self, doc) -> List[Dict]:
         """Estrae tutti i paragrafi dal documento."""
         paragraphs = []
         
         # Trova tutti i paragrafi
-        p_elements = soup.find_all(['p', 'div'], class_=lambda x: x and 'para' in str(x).lower())
+        p_elements = doc.xpath('//p[contains(@class, "para")] | //div[contains(@class, "para")]')
         if not p_elements:
-            p_elements = soup.find_all('p')
+            p_elements = doc.xpath('//p')
         
         for idx, p in enumerate(p_elements):
-            text = p.get_text(separator=' ', strip=True)
+            text = ' '.join(p.text_content().split())
             if len(text) > 20:  # Ignora paragrafi troppo corti
                 paragraphs.append({
                     'index': idx,
@@ -133,10 +140,10 @@ class TableExtractor:
         """Estrae il contenuto testuale della tabella."""
         rows = []
         
-        for tr in table_elem.find_all('tr'):
+        for tr in table_elem.xpath('.//tr'):
             cells = []
-            for cell in tr.find_all(['th', 'td']):
-                cell_text = cell.get_text(separator=' ', strip=True)
+            for cell in tr.xpath('.//th | .//td'):
+                cell_text = ' '.join(cell.text_content().split())
                 cells.append(cell_text)
             if cells:
                 rows.append(' | '.join(cells))
@@ -146,27 +153,27 @@ class TableExtractor:
     def _extract_caption(self, table_elem) -> str:
         """Estrae la caption della tabella."""
         # Cerca caption come elemento figlio
-        caption = table_elem.find('caption')
+        caption = table_elem.xpath('.//caption')
         if caption:
-            return caption.get_text(separator=' ', strip=True)
+            return ' '.join(caption[0].text_content().split())
         
         # Cerca nel parent (figure o div wrapper)
-        parent = table_elem.parent
-        if parent:
+        parent = table_elem.getparent()
+        if parent is not None:
             # Cerca figcaption
-            figcaption = parent.find('figcaption')
+            figcaption = parent.xpath('.//figcaption')
             if figcaption:
-                return figcaption.get_text(separator=' ', strip=True)
+                return ' '.join(figcaption[0].text_content().split())
             
             # Cerca elementi con classe caption
-            caption_elem = parent.find(class_=lambda x: x and 'caption' in str(x).lower())
+            caption_elem = parent.xpath('.//*[contains(@class, "caption")]')
             if caption_elem:
-                return caption_elem.get_text(separator=' ', strip=True)
+                return ' '.join(caption_elem[0].text_content().split())
             
             # Cerca elementi precedenti con "Table X"
-            prev = table_elem.find_previous(['p', 'div', 'span'])
+            prev = table_elem.xpath('preceding-sibling::*[self::p or self::div or self::span][1]')
             if prev:
-                text = prev.get_text(strip=True)
+                text = ' '.join(prev[0].text_content().split())
                 if re.match(r'^Table\s+\d+', text, re.IGNORECASE):
                     return text
         
@@ -280,25 +287,27 @@ class TableExtractor:
         return count
     
     def process_pubmed_articles(self) -> int:
-        """Processa tutti gli articoli PubMed."""
-        html_files = [f for f in os.listdir(PUBMED_DATA_DIR) if f.endswith('.html')]
+        """Processa tutti gli articoli PubMed (HTML o XML)."""
+        # Cerca sia file HTML che XML
+        all_files = [f for f in os.listdir(PUBMED_DATA_DIR) 
+                     if f.endswith('.html') or f.endswith('.xml')]
         
-        if not html_files:
-            print("[WARN] Nessun file HTML trovato in PubMed")
+        if not all_files:
+            print("[WARN] Nessun file HTML/XML trovato in PubMed")
             return 0
         
         count = 0
-        print(f"\n[INFO] Elaborazione {len(html_files)} articoli PubMed...")
+        print(f"\n[INFO] Elaborazione {len(all_files)} articoli PubMed...")
         
-        for filename in tqdm(html_files, desc="Estrazione tabelle PubMed"):
+        for filename in tqdm(all_files, desc="Estrazione tabelle PubMed"):
             filepath = os.path.join(PUBMED_DATA_DIR, filename)
-            paper_id = filename.replace('.html', '')
+            paper_id = filename.replace('.html', '').replace('.xml', '')
             
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
-                    html_content = f.read()
+                    content = f.read()
                 
-                tables = self.extract_from_html(html_content, paper_id, "pubmed")
+                tables = self.extract_from_html(content, paper_id, "pubmed")
                 self.tables.extend(tables)
                 count += len(tables)
                 

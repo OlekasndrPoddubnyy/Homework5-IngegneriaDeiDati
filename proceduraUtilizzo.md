@@ -9,8 +9,6 @@ python -m venv venv
 ## 2. Installare le dipendenze
 ```powershell
 pip install -r requirements.txt
-python -m spacy download en_core_web_sm
-python -m nltk.downloader punkt stopwords
 ```
 
 ## 3. Avviare Elasticsearch

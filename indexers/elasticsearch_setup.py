@@ -16,13 +16,20 @@ from config import (
 
 def get_elasticsearch_client() -> Elasticsearch:
     """Crea e restituisce un client Elasticsearch."""
-    es = Elasticsearch(ELASTICSEARCH_URL)
+    # Configurazione per Elasticsearch 8.x senza sicurezza
+    es = Elasticsearch(
+        ELASTICSEARCH_URL,
+        verify_certs=False,
+        ssl_show_warn=False
+    )
     
-    if not es.ping():
-        raise ConnectionError(f"Impossibile connettersi a Elasticsearch: {ELASTICSEARCH_URL}")
-    
-    print(f"[OK] Connesso a Elasticsearch: {ELASTICSEARCH_URL}")
-    return es
+    try:
+        # Prova a ottenere info del cluster invece di ping
+        info = es.info()
+        print(f"[OK] Connesso a Elasticsearch {info['version']['number']}: {ELASTICSEARCH_URL}")
+        return es
+    except Exception as e:
+        raise ConnectionError(f"Impossibile connettersi a Elasticsearch: {ELASTICSEARCH_URL} - {e}")
 
 
 # ============== MAPPINGS ==============
@@ -113,6 +120,9 @@ TABLES_MAPPING = {
             "paper_id": {
                 "type": "keyword"
             },
+            "source": {
+                "type": "keyword"  # "arxiv" o "pubmed"
+            },
             "caption": {
                 "type": "text",
                 "analyzer": "text_analyzer"
@@ -161,6 +171,9 @@ FIGURES_MAPPING = {
             },
             "paper_id": {
                 "type": "keyword"
+            },
+            "source": {
+                "type": "keyword"  # "arxiv" o "pubmed"
             },
             "url": {
                 "type": "keyword"

@@ -11,6 +11,8 @@ import re
 from datetime import datetime
 from typing import Dict, List, Optional
 from urllib.parse import urljoin, quote_plus
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 import requests
 from bs4 import BeautifulSoup
@@ -23,6 +25,9 @@ from config import (
     PUBMED_DATA_DIR, PUBMED_MIN_ARTICLES,
     HEADERS, REQUEST_DELAY, REQUEST_TIMEOUT, MAX_RETRIES
 )
+
+# Numero di thread per il download parallelo (ridotto per rispettare rate limits)
+MAX_WORKERS = 5
 
 
 class PubMedScraper:
@@ -165,62 +170,135 @@ class PubMedScraper:
         except Exception as e:
             return None
     
-    def download_article(self, article: Dict) -> bool:
+    def download_article(self, article: Dict) -> Optional[str]:
         """
-        Scarica il contenuto completo di un articolo PubMed.
+        Scarica il contenuto completo di un articolo PubMed usando l'API efetch.
         
         Args:
             article: Dizionario con i metadati dell'articolo
             
         Returns:
-            True se il download è riuscito
+            Percorso del file XML se il download è riuscito, None altrimenti
         """
         pmc_id = article['pmc_id']
-        article_url = article['url']
+        # Estrai l'ID numerico (rimuovi "PMC" se presente)
+        numeric_id = pmc_id.replace('PMC', '')
         
         try:
-            response = self._make_request(article_url)
+            # Usa l'API efetch per recuperare il full-text XML
+            efetch_url = (
+                f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+                f"?db=pmc&id={numeric_id}&rettype=full&retmode=xml"
+            )
+            
+            response = self._make_request(efetch_url)
             
             if response is None or response.status_code != 200:
-                return False
+                return None
             
-            soup = BeautifulSoup(response.text, 'lxml')
+            xml_content = response.text
+            
+            # Verifica che sia un XML valido con contenuto
+            if '<article' not in xml_content and '<pmc-articleset' not in xml_content:
+                return None
+            
+            # Parsing XML per estrarre testo
+            soup = BeautifulSoup(xml_content, 'lxml-xml')
             
             # Estrai abstract se non presente
-            if not article['abstract']:
-                abstract_elem = soup.find('div', class_='abstract')
-                if not abstract_elem:
-                    abstract_elem = soup.find('section', id='abstract')
+            if not article.get('abstract'):
+                abstract_elem = soup.find('abstract')
                 if abstract_elem:
                     article['abstract'] = abstract_elem.get_text(separator=' ', strip=True)
             
             # Estrai autori se non presenti
-            if not article['authors']:
-                authors_elem = soup.find('div', class_='contrib-group')
-                if authors_elem:
-                    author_names = authors_elem.find_all('a', class_='contrib-name')
-                    article['authors'] = [a.get_text(strip=True) for a in author_names]
+            if not article.get('authors') or len(article.get('authors', [])) == 0:
+                contrib_group = soup.find('contrib-group')
+                if contrib_group:
+                    authors = []
+                    for contrib in contrib_group.find_all('contrib', {'contrib-type': 'author'}):
+                        name_elem = contrib.find('name')
+                        if name_elem:
+                            surname = name_elem.find('surname')
+                            given = name_elem.find('given-names')
+                            if surname and given:
+                                authors.append(f"{given.get_text(strip=True)} {surname.get_text(strip=True)}")
+                            elif surname:
+                                authors.append(surname.get_text(strip=True))
+                    if authors:
+                        article['authors'] = authors
             
-            # Estrai data se non presente
-            if not article['date']:
-                date_elem = soup.find('span', class_='date')
-                if date_elem:
-                    article['date'] = date_elem.get_text(strip=True)
+            # Estrai testo completo dal body
+            body = soup.find('body')
+            if body:
+                full_text = body.get_text(separator=' ', strip=True)
+                # Rimuovi spazi multipli
+                full_text = re.sub(r'\s+', ' ', full_text)
+                article['full_text'] = full_text
+            else:
+                article['full_text'] = article.get('abstract', '')
             
-            # Estrai testo completo
-            full_text = self._extract_full_text(soup)
-            article['full_text'] = full_text
+            # Salva l'XML (che può essere usato per estrazione tabelle/figure)
+            xml_file = os.path.join(str(PUBMED_DATA_DIR), f"{pmc_id}.xml")
+            with open(xml_file, 'w', encoding='utf-8') as f:
+                f.write(xml_content)
             
-            # Salva l'HTML
-            html_file = os.path.join(PUBMED_DATA_DIR, f"{pmc_id}.html")
-            with open(html_file, 'w', encoding='utf-8') as f:
-                f.write(response.text)
-            
-            return True
+            article['html_path'] = xml_file  # Anche se è XML, lo trattiamo come file di contenuto
+            article['xml_path'] = xml_file
+            return xml_file
             
         except Exception as e:
-            print(f"\n[WARN] Errore download {pmc_id}: {e}")
-            return False
+            return None
+    
+    def download_articles_parallel(self, articles: List[Dict], max_workers: int = MAX_WORKERS) -> List[Dict]:
+        """
+        Scarica articoli in parallelo usando ThreadPoolExecutor.
+        
+        Args:
+            articles: Lista di articoli da scaricare
+            max_workers: Numero di thread paralleli
+            
+        Returns:
+            Lista di articoli con html_path aggiornato
+        """
+        print(f"\n[INFO] Download parallelo con {max_workers} thread...")
+        
+        successful = 0
+        failed = 0
+        lock = threading.Lock()
+        
+        def download_one(article):
+            nonlocal successful, failed
+            try:
+                result = self.download_article(article)
+                with lock:
+                    if result:
+                        successful += 1
+                    else:
+                        failed += 1
+            except Exception as e:
+                with lock:
+                    failed += 1
+            return article
+        
+        # Download sequenziale in batch per evitare problemi con ThreadPoolExecutor
+        batch_size = max_workers
+        with tqdm(total=len(articles), desc="Download articoli") as pbar:
+            for i in range(0, len(articles), batch_size):
+                batch = articles[i:i+batch_size]
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = {executor.submit(download_one, art): art for art in batch}
+                    for future in as_completed(futures, timeout=60):
+                        try:
+                            future.result(timeout=30)
+                        except Exception as e:
+                            with lock:
+                                failed += 1
+                        pbar.update(1)
+                time.sleep(0.3)  # Pausa tra batch
+        
+        print(f"[OK] Download completato: {successful} successi, {failed} falliti")
+        return articles
     
     def _extract_full_text(self, soup: BeautifulSoup) -> str:
         """Estrae il testo completo dall'HTML dell'articolo."""

@@ -50,12 +50,17 @@ class TableIndexer:
     
     def prepare_document(self, table: Dict) -> Dict:
         """Prepara un documento tabella per l'indicizzazione."""
+        paper_id = table['paper_id']
+        # Determina la fonte dal paper_id
+        source = "pubmed" if paper_id.startswith("PMC") else "arxiv"
+        
         return {
             "_index": INDEX_TABLES,
             "_id": table['table_id'],
             "_source": {
                 "table_id": table['table_id'],
-                "paper_id": table['paper_id'],
+                "paper_id": paper_id,
+                "source": source,
                 "caption": table.get('caption', ''),
                 "body": table.get('body', ''),
                 "mentions": '\n\n'.join(table.get('mentions', [])),
