@@ -545,6 +545,11 @@
                     <option value="tables" {% if doc_type == 'tables' %}selected{% endif %}>Tabelle</option>
                     <option value="figures" {% if doc_type == 'figures' %}selected{% endif %}>Figure</option>
                 </select>
+                <select name="source" class="form-control" style="max-width: 130px;">
+                    <option value="all" {% if source_filter == 'all' or not source_filter %}selected{% endif %}>Tutte</option>
+                    <option value="arxiv" {% if source_filter == 'arxiv' %}selected{% endif %}>arXiv</option>
+                    <option value="pubmed" {% if source_filter == 'pubmed' %}selected{% endif %}>PubMed</option>
+                </select>
                 <button type="submit" class="btn btn-search">
                     <i class="bi bi-search"></i> Cerca
                 </button>
@@ -594,17 +599,22 @@
                 <div class="results-count">
                     Trovati <strong>{{ results|length }}</strong> risultati per 
                     "<span class="query-term">{{ query }}</span>"
+                    {% if source_filter and source_filter != 'all' %}
+                        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+                            - Filtrati per: <strong>{{ source_filter|upper }}</strong>
+                        </span>
+                    {% endif %}
                 </div>
                 <div class="filter-pills">
-                    <a href="/search?q={{ query }}&type=papers" 
+                    <a href="/search?q={{ query }}&type=papers&source={{ source_filter if source_filter else 'all' }}" 
                        class="filter-pill {% if doc_type == 'papers' %}active{% endif %}">
                         <i class="bi bi-file-earmark-text"></i> Articoli
                     </a>
-                    <a href="/search?q={{ query }}&type=tables" 
+                    <a href="/search?q={{ query }}&type=tables&source={{ source_filter if source_filter else 'all' }}" 
                        class="filter-pill {% if doc_type == 'tables' %}active{% endif %}">
                         <i class="bi bi-table"></i> Tabelle
                     </a>
-                    <a href="/search?q={{ query }}&type=figures" 
+                    <a href="/search?q={{ query }}&type=figures&source={{ source_filter if source_filter else 'all' }}" 
                        class="filter-pill {% if doc_type == 'figures' %}active{% endif %}">
                         <i class="bi bi-image"></i> Figure
                     </a>
@@ -641,6 +651,12 @@
                         </div>
                         
                         <div class="result-meta">
+                            {% if result.source.source %}
+                                <div class="result-meta-item">
+                                    <i class="bi bi-database"></i>
+                                    <strong>{{ result.source.source|upper }}</strong>
+                                </div>
+                            {% endif %}
                             {% if doc_type == 'papers' %}
                                 {% if result.source.authors %}
                                     <div class="result-meta-item">
@@ -654,23 +670,11 @@
                                         {{ result.source.date }}
                                     </div>
                                 {% endif %}
-                                {% if result.source.source %}
-                                    <div class="result-meta-item">
-                                        <i class="bi bi-journal"></i>
-                                        {{ result.source.source }}
-                                    </div>
-                                {% endif %}
                             {% else %}
                                 {% if result.source.paper_id %}
                                     <div class="result-meta-item">
                                         <i class="bi bi-link-45deg"></i>
                                         Paper ID: {{ result.source.paper_id }}
-                                    </div>
-                                {% endif %}
-                                {% if result.source.section %}
-                                    <div class="result-meta-item">
-                                        <i class="bi bi-bookmark"></i>
-                                        Sezione: {{ result.source.section }}
                                     </div>
                                 {% endif %}
                             {% endif %}
@@ -713,9 +717,19 @@
                                     Vedi Dettagli <i class="bi bi-arrow-right"></i>
                                 </a>
                             {% elif result.source.paper_id %}
-                                <a href="/paper/{% if result.source.paper_id.startswith('PMC') %}pubmed_{{ result.source.paper_id }}{% else %}arxiv_{{ result.source.paper_id }}{% endif %}" class="btn-detail">
-                                    Vedi Articolo <i class="bi bi-arrow-right"></i>
-                                </a>
+                                {% if result.source.source == 'pubmed' %}
+                                    <a href="/paper/pubmed_{{ result.source.paper_id }}" class="btn-detail">
+                                        Vedi Articolo <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                {% elif result.source.source == 'arxiv' %}
+                                    <a href="/paper/arxiv_{{ result.source.paper_id.replace('/', '_') }}" class="btn-detail">
+                                        Vedi Articolo <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                {% else %}
+                                    <a href="/paper/{{ result.source.paper_id }}" class="btn-detail">
+                                        Vedi Articolo <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>

@@ -420,12 +420,28 @@ def main():
         if action == 'skip':
             # Usa dati esistenti
             arxiv_articles, pubmed_articles = load_existing_articles()
+            
+            # Controlla se esistono già dati estratti
+            tables_path = DATA_DIR / "extracted_tables.json"
+            figures_path = DATA_DIR / "extracted_figures.json"
+            
+            if tables_path.exists() and figures_path.exists():
+                logger.info("\n[INFO] Caricamento tabelle e figure esistenti...")
+                with open(tables_path, 'r', encoding='utf-8') as f:
+                    all_tables = json.load(f)
+                with open(figures_path, 'r', encoding='utf-8') as f:
+                    all_figures = json.load(f)
+                logger.info(f"[OK] Caricate {len(all_tables)} tabelle e {len(all_figures)} figure")
+            else:
+                logger.info("\n[INFO] Dati estratti non trovati, eseguo estrazione...")
+                all_tables, all_figures = run_extraction(arxiv_articles, pubmed_articles)
         else:
             # Esegui scraping (fresh o continue)
             arxiv_articles, pubmed_articles = run_scraping(continue_mode=(action == 'continue'))
+            # Estrazione sempre eseguita dopo scraping
+            all_tables, all_figures = run_extraction(arxiv_articles, pubmed_articles)
         
-        # Estrazione e indicizzazione
-        all_tables, all_figures = run_extraction(arxiv_articles, pubmed_articles)
+        # Indicizzazione
         run_indexing(arxiv_articles, pubmed_articles, all_tables, all_figures)
         
         # Riepilogo

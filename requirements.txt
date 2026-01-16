@@ -7,7 +7,7 @@ beautifulsoup4>=4.12.3
 lxml>=5.1.0
 
 # Elasticsearch
-elasticsearch>=8.12.1
+elasticsearch>=8.12.1,<9.0.0
 
 # Web Interface
 Flask>=3.0.0

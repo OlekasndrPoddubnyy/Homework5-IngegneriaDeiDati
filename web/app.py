@@ -27,18 +27,34 @@ app.config['SECRET_KEY'] = 'homework5-ingegneria-dati-2025'
 es = Elasticsearch(ELASTICSEARCH_URL)
 
 
-def search_index(index: str, query: str, fields: list, size: int = 20):
+def search_index(index: str, query: str, fields: list, size: int = 20, source_filter: str = None):
     """Esegue una ricerca su un indice specifico."""
     try:
-        body = {
-            "query": {
-                "multi_match": {
-                    "query": query,
-                    "fields": fields,
-                    "type": "best_fields",
-                    "fuzziness": "AUTO"
+        # Costruisci la query base
+        base_query = {
+            "multi_match": {
+                "query": query,
+                "fields": fields,
+                "type": "best_fields",
+                "fuzziness": "AUTO"
+            }
+        }
+        
+        # Aggiungi filtro per fonte se specificato
+        if source_filter and source_filter != 'all':
+            query_body = {
+                "bool": {
+                    "must": base_query,
+                    "filter": {
+                        "term": {"source": source_filter}
+                    }
                 }
-            },
+            }
+        else:
+            query_body = base_query
+        
+        body = {
+            "query": query_body,
             "size": size,
             "highlight": {
                 "fields": {field.split('^')[0]: {"fragment_size": 200} for field in fields},
@@ -83,7 +99,7 @@ def parse_boolean_query(query_str: str):
     return must_terms, should_terms, must_not_terms
 
 
-def boolean_search(index: str, must_terms: list, should_terms: list, must_not_terms: list, size: int = 20):
+def boolean_search(index: str, must_terms: list, should_terms: list, must_not_terms: list, size: int = 20, source_filter: str = None):
     """Esegue una ricerca booleana."""
     bool_query = {"bool": {}}
     
@@ -105,6 +121,12 @@ def boolean_search(index: str, must_terms: list, should_terms: list, must_not_te
             {"multi_match": {"query": term, "fields": ["*"]}}
             for term in must_not_terms
         ]
+    
+    # Aggiungi filtro per fonte se specificato
+    if source_filter and source_filter != 'all':
+        bool_query["bool"]["filter"] = {
+            "term": {"source": source_filter}
+        }
     
     body = {
         "query": bool_query,
@@ -208,10 +230,11 @@ def search():
     query = request.args.get('q', '').strip()
     doc_type = request.args.get('type', 'papers')
     search_type = request.args.get('search_type', 'fulltext')
+    source_filter = request.args.get('source', 'all')
     size = min(int(request.args.get('size', 20)), 100)
     
     if not query:
-        return render_template('results.html', results=[], query='', doc_type=doc_type, total=0)
+        return render_template('results.html', results=[], query='', doc_type=doc_type, source_filter=source_filter, total=0)
     
     # Determina indice e campi
     if doc_type == 'papers':
@@ -230,9 +253,9 @@ def search():
     # Esegui ricerca
     if search_type == 'boolean':
         must_terms, should_terms, must_not_terms = parse_boolean_query(query)
-        results = boolean_search(index, must_terms, should_terms, must_not_terms, size)
+        results = boolean_search(index, must_terms, should_terms, must_not_terms, size, source_filter)
     else:
-        results = search_index(index, query, fields, size)
+        results = search_index(index, query, fields, size, source_filter)
     
     # Estrai risultati
     hits = results.get('hits', {}).get('hits', [])
@@ -260,6 +283,7 @@ def search():
         query=query,
         doc_type=doc_type,
         search_type=search_type,
+        source_filter=source_filter,
         total=total
     )
 
@@ -270,6 +294,7 @@ def api_search():
     query = request.args.get('q', '').strip()
     doc_type = request.args.get('type', 'papers')
     search_type = request.args.get('search_type', 'fulltext')
+    source_filter = request.args.get('source', 'all')
     size = min(int(request.args.get('size', 20)), 100)
     
     if not query:
@@ -291,9 +316,9 @@ def api_search():
     # Esegui ricerca
     if search_type == 'boolean':
         must_terms, should_terms, must_not_terms = parse_boolean_query(query)
-        results = boolean_search(index, must_terms, should_terms, must_not_terms, size)
+        results = boolean_search(index, must_terms, should_terms, must_not_terms, size, source_filter)
     else:
-        results = search_index(index, query, fields, size)
+        results = search_index(index, query, fields, size, source_filter)
     
     # Estrai e restituisci risultati
     hits = results.get('hits', {}).get('hits', [])
@@ -304,6 +329,7 @@ def api_search():
     return jsonify({
         'query': query,
         'type': doc_type,
+        'source': source_filter,
         'total': total,
         'results': [
             {
@@ -340,20 +366,53 @@ def view_paper(paper_id):
         result = es.get(index=INDEX_PAPERS, id=paper_id)
         source = result['_source']
         
-        # Cerca tabelle e figure associate
+        # Estrai il vero paper_id dal source (senza prefisso arxiv_ o pubmed_)
+        actual_paper_id = source.get('paper_id') or source.get('arxiv_id') or source.get('pmc_id') or source.get('pmid')
+        if not actual_paper_id and paper_id.startswith('arxiv_'):
+            actual_paper_id = paper_id.replace('arxiv_', '')
+        elif not actual_paper_id and paper_id.startswith('pubmed_'):
+            actual_paper_id = paper_id.replace('pubmed_', '')
+        
+        # Debug
+        print(f"[DEBUG] URL paper_id: {paper_id}")
+        print(f"[DEBUG] Actual paper_id from source: {actual_paper_id}")
+        print(f"[DEBUG] Source keys: {list(source.keys())}")
+        
+        # Cerca tabelle e figure associate usando il paper_id reale
         tables_response = es.search(
             index=INDEX_TABLES,
-            body={"query": {"term": {"paper_id": paper_id}}, "size": 100}
+            body={
+                "query": {"term": {"paper_id": actual_paper_id}}, 
+                "size": 100,
+                "_source": ["table_id", "paper_id", "caption", "body", "mentions", "context_paragraphs", "position"],
+                "sort": [{"position": {"order": "asc"}}]
+            }
         )
         
         figures_response = es.search(
             index=INDEX_FIGURES,
-            body={"query": {"term": {"paper_id": paper_id}}, "size": 100}
+            body={
+                "query": {"term": {"paper_id": actual_paper_id}}, 
+                "size": 100,
+                "_source": ["figure_id", "paper_id", "caption", "url", "mentions", "context_paragraphs", "position"],
+                "sort": [{"position": {"order": "asc"}}]
+            }
         )
         
         # Formatta tabelle e figure per il template
         tables = [hit['_source'] for hit in tables_response['hits']['hits']]
         figures = [hit['_source'] for hit in figures_response['hits']['hits']]
+        
+        # Debug: aggiungi log per verificare cosa viene recuperato
+        print(f"[DEBUG] Tabelle trovate: {len(tables)}")
+        print(f"[DEBUG] Figure trovate: {len(figures)}")
+        if tables:
+            print(f"[DEBUG] Prima tabella: {tables[0].get('table_id', 'N/A')}")
+            print(f"[DEBUG] Prima tabella ha 'body': {'body' in tables[0]}")
+            if 'body' in tables[0]:
+                print(f"[DEBUG] Lunghezza body: {len(tables[0].get('body', ''))}")
+        if figures:
+            print(f"[DEBUG] Prima figura: {figures[0].get('figure_id', 'N/A')}")
         
         return render_template(
             'paper_detail.html',
@@ -363,6 +422,7 @@ def view_paper(paper_id):
             figures=figures
         )
     except Exception as e:
+        print(f"[ERROR] view_paper exception: {e}")
         return render_template('error.html', error=str(e)), 404
 
 
