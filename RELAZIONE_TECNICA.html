@@ -7,16 +7,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1e40af;
-            --secondary: #7c3aed;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
+            --primary: #1e40af;
+            --primary-light: #3b82f6;
+            --secondary: #6366f1;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
             --dark: #1e293b;
+            --dark-light: #334155;
             --light: #f8fafc;
             --border: #e2e8f0;
-            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow: rgba(0, 0, 0, 0.08);
+            --shadow-md: rgba(0, 0, 0, 0.12);
         }
         
         * {
@@ -35,48 +37,66 @@
         
         /* Header */
         .header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #3730a3 100%);
             color: white;
-            padding: 60px 0;
+            padding: 80px 0;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(37, 99, 235, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.05) 100%);
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
         }
         
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 15px;
+            font-size: 2.75rem;
+            font-weight: 700;
+            margin-bottom: 20px;
             letter-spacing: -0.5px;
         }
         
         .header .subtitle {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 400;
             opacity: 0.95;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         
         .header .meta {
-            font-size: 0.95rem;
+            font-size: 1rem;
             opacity: 0.85;
+            font-weight: 300;
         }
         
         /* Table of Contents */
         .toc {
             background: white;
-            border: 2px solid var(--border);
-            border-radius: 16px;
-            padding: 40px 50px;
-            margin: 50px 0;
-            box-shadow: 0 4px 20px var(--shadow);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 50px 60px;
+            margin: 60px 0;
+            box-shadow: 0 2px 12px var(--shadow);
         }
         
         .toc h2 {
-            margin: 0 0 30px 0;
-            padding: 0;
-            border: none;
-            font-size: 1.8rem;
+            margin: 0 0 40px 0;
+            padding: 0 0 20px 0;
+            border-bottom: 2px solid var(--border);
+            font-size: 2rem;
             color: var(--dark);
+            font-weight: 600;
         }
         
         .toc h2::before {
@@ -90,30 +110,30 @@
         }
         
         .toc-list > li {
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
         
         .toc-list a {
-            color: var(--dark);
+            color: var(--dark-light);
             text-decoration: none;
             font-size: 1.05rem;
             font-weight: 500;
             display: flex;
             align-items: baseline;
             gap: 12px;
-            padding: 8px 0;
+            padding: 10px 0;
             transition: all 0.2s ease;
         }
         
         .toc-list a:hover {
             color: var(--primary);
-            padding-left: 10px;
+            padding-left: 8px;
         }
         
         .toc-number {
-            font-weight: 700;
+            font-weight: 600;
             color: var(--primary);
-            min-width: 30px;
+            min-width: 35px;
         }
         
         .toc-dots {
@@ -126,8 +146,8 @@
         }
         
         .toc-page {
-            color: var(--text-secondary);
-            font-weight: 600;
+            color: #64748b;
+            font-weight: 500;
         }
         
         /* Container */
@@ -143,34 +163,34 @@
         
         /* Typography */
         h2 {
-            font-size: 2rem;
-            font-weight: 700;
+            font-size: 2.2rem;
+            font-weight: 600;
             color: var(--dark);
-            margin: 60px 0 30px;
-            padding-bottom: 15px;
-            border-bottom: 3px solid var(--primary);
+            margin: 70px 0 30px;
+            padding-bottom: 18px;
+            border-bottom: 2px solid var(--primary);
             position: relative;
         }
         
         h2::before {
             content: '';
             position: absolute;
-            bottom: -3px;
+            bottom: -2px;
             left: 0;
-            width: 80px;
-            height: 3px;
+            width: 100px;
+            height: 2px;
             background: var(--secondary);
         }
         
         h3 {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             font-weight: 600;
             color: var(--dark);
-            margin: 40px 0 20px;
+            margin: 45px 0 20px;
         }
         
         h4 {
-            font-size: 1.2rem;
+            font-size: 1.25rem;
             font-weight: 600;
             color: var(--primary);
             margin: 30px 0 15px;
@@ -179,56 +199,62 @@
         p {
             margin-bottom: 20px;
             text-align: justify;
+            line-height: 1.8;
         }
         
         /* Lists */
         ul, ol {
-            margin: 20px 0 20px 25px;
+            margin: 20px 0 20px 30px;
         }
         
         li {
-            margin-bottom: 12px;
+            margin-bottom: 14px;
+            line-height: 1.7;
         }
         
         /* Code */
         code {
             font-family: 'Fira Code', monospace;
             background: #f1f5f9;
-            padding: 3px 8px;
+            padding: 4px 10px;
             border-radius: 4px;
             font-size: 0.9em;
-            color: #e11d48;
+            color: #be123c;
             font-weight: 500;
+            border: 1px solid #e2e8f0;
         }
         
         pre {
-            background: #1e293b;
+            background: #0f172a;
             color: #e2e8f0;
-            padding: 25px;
-            border-radius: 12px;
+            padding: 30px;
+            border-radius: 10px;
             overflow-x: auto;
-            margin: 25px 0;
+            margin: 30px 0;
             font-family: 'Fira Code', monospace;
             font-size: 0.9rem;
-            line-height: 1.6;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            line-height: 1.7;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            border: 1px solid #1e293b;
         }
         
         pre code {
             background: none;
             padding: 0;
             color: inherit;
+            border: none;
         }
         
         /* Tables */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 30px 0;
+            margin: 35px 0;
             background: white;
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 2px 15px var(--shadow);
+            border: 1px solid var(--border);
         }
         
         thead {
@@ -237,7 +263,7 @@
         }
         
         th, td {
-            padding: 15px 20px;
+            padding: 16px 22px;
             text-align: left;
             border-bottom: 1px solid var(--border);
         }
@@ -245,6 +271,11 @@
         th {
             font-weight: 600;
             font-size: 0.95rem;
+            letter-spacing: 0.3px;
+        }
+        
+        tbody tr {
+            transition: background 0.2s ease;
         }
         
         tbody tr:hover {
@@ -259,8 +290,8 @@
         .info-box {
             background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
             border-left: 4px solid var(--primary);
-            padding: 25px;
-            margin: 30px 0;
+            padding: 30px;
+            margin: 35px 0;
             border-radius: 8px;
             box-shadow: 0 2px 10px var(--shadow);
         }
@@ -268,6 +299,7 @@
         .info-box h4 {
             margin-top: 0;
             color: var(--primary);
+            font-size: 1.15rem;
         }
         
         .success-box {
@@ -291,17 +323,17 @@
         /* Architecture Diagram */
         .architecture {
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            padding: 30px;
+            padding: 35px;
             border-radius: 12px;
-            margin: 30px 0;
-            border: 2px solid var(--border);
+            margin: 35px 0;
+            border: 1px solid var(--border);
         }
         
         .architecture pre {
             background: white;
             color: var(--dark);
             border: 1px solid var(--border);
-            box-shadow: none;
+            box-shadow: 0 1px 3px var(--shadow);
         }
         
         /* Stats Card */
@@ -309,27 +341,28 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 25px;
-            margin: 30px 0;
+            margin: 35px 0;
         }
         
         .stat-card {
             background: white;
-            padding: 25px;
-            border-radius: 12px;
-            border: 2px solid var(--border);
-            box-shadow: 0 4px 15px var(--shadow);
-            transition: transform 0.3s ease;
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 12px var(--shadow);
+            transition: all 0.3s ease;
         }
         
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px var(--shadow);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px var(--shadow-md);
         }
         
         .stat-card h4 {
-            margin: 0 0 10px;
+            margin: 0 0 15px;
             color: var(--primary);
             font-size: 1rem;
+            font-weight: 600;
         }
         
         .stat-card .value {
@@ -342,13 +375,13 @@
         .stat-card .label {
             font-size: 0.9rem;
             color: #64748b;
-            margin-top: 5px;
+            margin-top: 8px;
         }
         
         /* Highlights */
         .highlight {
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            padding: 3px 8px;
+            padding: 3px 10px;
             border-radius: 4px;
             font-weight: 500;
         }
@@ -356,11 +389,12 @@
         /* Section Badges */
         .badge {
             display: inline-block;
-            padding: 6px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
             margin-right: 8px;
+            margin-bottom: 6px;
         }
         
         .badge-primary {
@@ -382,9 +416,9 @@
         .footer {
             background: var(--dark);
             color: white;
-            padding: 40px 0;
+            padding: 50px 0;
             text-align: center;
-            margin-top: 80px;
+            margin-top: 100px;
         }
         
         .footer p {
@@ -414,7 +448,7 @@
         /* Responsive */
         @media (max-width: 768px) {
             .header h1 {
-                font-size: 1.8rem;
+                font-size: 2rem;
             }
             
             .container {
@@ -422,7 +456,7 @@
             }
             
             h2 {
-                font-size: 1.6rem;
+                font-size: 1.75rem;
             }
             
             .toc {
@@ -438,9 +472,11 @@
 <body>
     <div class="header">
         <div class="container">
-            <h1>Sistema di Ricerca Articoli Scientifici</h1>
-            <p class="subtitle">Relazione Tecnica Completa</p>
-            <p class="meta">Homework 5 - Ingegneria dei Dati 2025/2026 | Oleksandr Poddubnyy</p>
+            <div class="header-content">
+                <h1>Sistema di Ricerca Articoli Scientifici</h1>
+                <p class="subtitle">Relazione Tecnica Completa</p>
+                <p class="meta">Homework 5 - Ingegneria dei Dati 2025/2026 | Oleksandr Poddubnyy</p>
+            </div>
         </div>
     </div>
     
@@ -532,6 +568,7 @@
                     </li>
                 </ol>
             </div>
+            
             <h2 id="introduzione">1. Introduzione</h2>
             
             <h3>1.1 Obiettivo del Progetto</h3>
@@ -547,6 +584,7 @@
             
             <h3>1.3 Keywords di Riferimento</h3>
             <div class="info-box">
+                <h4>Definizione delle Keywords</h4>
                 <p><strong>arXiv (Studenti Lavoratori)</strong>:</p>
                 <p><span class="badge badge-primary">Query processing</span> <span class="badge badge-primary">Query optimization</span></p>
                 
@@ -606,54 +644,54 @@
             
             <div class="architecture">
                 <pre>
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                        DATA SOURCES                          │
 │                 (arXiv, PubMed PMC)                          │
-└────────────────────┬────────────────────────────────────────┘
+└────────────────────┬─────────────────────────────────────┘
                      │
                      ▼
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                    SCRAPING LAYER                            │
 │  ┌─────────────────┐         ┌─────────────────┐           │
 │  │ arXiv Scraper   │         │ PubMed Scraper  │           │
 │  │ (HTML articles) │         │ (XML/HTML OA)   │           │
 │  └─────────────────┘         └─────────────────┘           │
-└────────────────────┬────────────────────────────────────────┘
+└────────────────────┬─────────────────────────────────────┘
                      │
                      ▼
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                   EXTRACTION LAYER                           │
 │  ┌──────────────────┐       ┌──────────────────┐           │
 │  │ Table Extractor  │       │ Figure Extractor │           │
 │  │ + Context Mining │       │ + Caption Mining │           │
 │  └──────────────────┘       └──────────────────┘           │
-└────────────────────┬────────────────────────────────────────┘
+└────────────────────┬─────────────────────────────────────┘
                      │
                      ▼
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                   INDEXING LAYER                             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │
 │  │ Papers   │  │ Tables   │  │ Figures  │                  │
 │  │ Indexer  │  │ Indexer  │  │ Indexer  │                  │
 │  └──────────┘  └──────────┘  └──────────┘                  │
-└────────────────────┬────────────────────────────────────────┘
+└────────────────────┬─────────────────────────────────────┘
                      │
                      ▼
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                  ELASTICSEARCH 8.x                           │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        │
 │  │ Papers Index │ │ Tables Index │ │ Figures Index│        │
 │  └──────────────┘ └──────────────┘ └──────────────┘        │
-└────────────────────┬────────────────────────────────────────┘
+└────────────────────┬─────────────────────────────────────┘
                      │
                      ▼
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                    SEARCH LAYER                              │
 │  ┌──────────────────┐         ┌──────────────────┐         │
 │  │   Web Interface  │         │   CLI Interface  │         │
 │  │   (Flask App)    │         │   (Rich CLI)     │         │
 │  └──────────────────┘         └──────────────────┘         │
-└─────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────┘
                 </pre>
             </div>
             
@@ -678,7 +716,7 @@ MAX_RETRIES = 3
 REQUEST_TIMEOUT = 15</code></pre>
             
             <div class="success-box">
-                <h4>🔐 Sicurezza</h4>
+                <h4>Nota sulla Sicurezza</h4>
                 <p>La Flask SECRET_KEY utilizza una variabile d'ambiente per maggiore sicurezza:</p>
                 <pre><code>app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(24).hex())</code></pre>
                 <p>Se <code>FLASK_SECRET_KEY</code> non è impostata, viene generata automaticamente una chiave casuale sicura.</p>
@@ -725,7 +763,7 @@ REQUEST_TIMEOUT = 15</code></pre>
     }</code></pre>
             
             <div class="success-box">
-                <h4>✓ Ottimizzazioni PubMed</h4>
+                <h4>Ottimizzazioni PubMed</h4>
                 <ul>
                     <li>Filtraggio automatico Open Access</li>
                     <li>Parsing JATS XML per metadata ricchi</li>
@@ -863,7 +901,7 @@ FASE 3: INDEXING
         downloaded.append(result)</code></pre>
             
             <div class="success-box">
-                <h4>📈 Vantaggi Parallelizzazione</h4>
+                <h4>Vantaggi Parallelizzazione</h4>
                 <ul>
                     <li>Velocità 5x rispetto a download sequenziale</li>
                     <li>Gestione errori per singolo download</li>
@@ -1017,19 +1055,19 @@ FASE 3: INDEXING
             
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h4><i class="bi bi-file-text"></i> Metadata</h4>
+                    <h4>Metadata</h4>
                     <p>Titolo, autori, data, abstract completo</p>
                 </div>
                 <div class="stat-card">
-                    <h4><i class="bi bi-table"></i> Tabelle</h4>
+                    <h4>Tabelle</h4>
                     <p>Lista completa tabelle associate</p>
                 </div>
                 <div class="stat-card">
-                    <h4><i class="bi bi-image"></i> Figure</h4>
+                    <h4>Figure</h4>
                     <p>Galleria figure con caption</p>
                 </div>
                 <div class="stat-card">
-                    <h4><i class="bi bi-link"></i> Link</h4>
+                    <h4>Link</h4>
                     <p>Collegamento articolo originale</p>
                 </div>
             </div>
@@ -1056,9 +1094,9 @@ FASE 3: INDEXING
             <h4>Menu Interattivo CLI Ricerca</h4>
             <p>Interfaccia a riga di comando con formattazione colorata:</p>
             
-            <pre><code>╔══════════════════════════════════════════════════════╗
+            <pre><code>╔═══════════════════════════════════════════════╗
 ║   Sistema di Ricerca Articoli Scientifici            ║
-╚══════════════════════════════════════════════════════╝
+╚═══════════════════════════════════════════════╝
 
 Opzioni:
   [1] Cerca Articoli
@@ -1093,7 +1131,7 @@ Cosa vuoi fare?
             </div>
             
             <div class="success-box">
-                <h4>✓ Vantaggi CLI</h4>
+                <h4>Vantaggi CLI</h4>
                 <ul>
                     <li>Veloce per utenti esperti</li>
                     <li>Integrazione in script</li>
@@ -1158,7 +1196,7 @@ Cosa vuoi fare?
             </table>
             
             <div class="success-box">
-                <h4>✓ Osservazioni</h4>
+                <h4>Osservazioni</h4>
                 <ul>
                     <li>Parallelizzazione migliora le performance di <strong>4.6x</strong></li>
                     <li>Bottleneck: latenza di rete, non parsing</li>
@@ -1209,7 +1247,7 @@ Cosa vuoi fare?
             <h3>8.1 Statistiche Dataset</h3>
             
             <div class="warning-box">
-                <h4>⚠️ Nota sulle Statistiche</h4>
+                <h4>Nota sulle Statistiche</h4>
                 <p>Le statistiche seguenti sono esempi basati su un'esecuzione completa del sistema. I numeri esatti varieranno in base al momento dell'esecuzione e alla disponibilità degli articoli.</p>
             </div>
             
@@ -1323,7 +1361,7 @@ Cosa vuoi fare?
             </table>
             
             <div class="success-box">
-                <h4>📊 Metriche Aggregate</h4>
+                <h4>Metriche Aggregate</h4>
                 <ul>
                     <li><strong>MRR (Mean Reciprocal Rank)</strong>: 0.87</li>
                     <li><strong>NDCG@10</strong>: 0.83</li>
@@ -1346,7 +1384,7 @@ Cosa vuoi fare?
             
             <h4>2. Robustezza</h4>
             <div class="success-box">
-                <h4>✓ Gestione Errori Completa</h4>
+                <h4>Gestione Errori Completa</h4>
                 <ul>
                     <li>Retry automatici con exponential backoff</li>
                     <li>Fallback multipli (XML → HTML)</li>
@@ -1396,10 +1434,10 @@ Cosa vuoi fare?
                 <p><strong>Query</strong>: "performance comparison"</p>
                 <p><strong>Risultato</strong>:</p>
                 <ul>
-                    <li>→ Trova tabelle con benchmark diretti</li>
-                    <li>→ Mostra paper di origine collegato</li>
-                    <li>→ Evidenzia menzioni nel testo</li>
-                    <li>→ Presenta contesto semantico</li>
+                    <li>Trova tabelle con benchmark diretti</li>
+                    <li>Mostra paper di origine collegato</li>
+                    <li>Evidenzia menzioni nel testo</li>
+                    <li>Presenta contesto semantico</li>
                 </ul>
             </div>
             
@@ -1407,7 +1445,7 @@ Cosa vuoi fare?
             
             <h4>1. Coverage Limitata</h4>
             <div class="warning-box">
-                <h4>⚠️ Limitazioni Attuali</h4>
+                <h4>Limitazioni Attuali</h4>
                 <ul>
                     <li>Solo arXiv e PubMed (manca IEEE, ACM, Springer)</li>
                     <li>Solo articoli con HTML/XML (no PDF puro)</li>
@@ -1483,38 +1521,38 @@ Cosa vuoi fare?
                 <tbody>
                     <tr>
                         <td>Ricerca full-text</td>
-                        <td>✅</td>
-                        <td>✅</td>
+                        <td>Sì</td>
+                        <td>Sì</td>
                     </tr>
                     <tr>
                         <td>Ricerca in tabelle</td>
-                        <td><span class="badge badge-success">✅</span></td>
-                        <td>❌</td>
+                        <td><span class="badge badge-success">Sì</span></td>
+                        <td>No</td>
                     </tr>
                     <tr>
                         <td>Ricerca in figure</td>
-                        <td><span class="badge badge-success">✅</span></td>
-                        <td>❌</td>
+                        <td><span class="badge badge-success">Sì</span></td>
+                        <td>No</td>
                     </tr>
                     <tr>
                         <td>Context mining</td>
-                        <td><span class="badge badge-success">✅</span></td>
-                        <td>❌</td>
+                        <td><span class="badge badge-success">Sì</span></td>
+                        <td>No</td>
                     </tr>
                     <tr>
                         <td>API pubblica</td>
-                        <td>✅</td>
-                        <td>❌</td>
+                        <td>Sì</td>
+                        <td>No</td>
                     </tr>
                     <tr>
                         <td>Self-hosted</td>
-                        <td>✅</td>
-                        <td>❌</td>
+                        <td>Sì</td>
+                        <td>No</td>
                     </tr>
                     <tr>
                         <td>Coverage</td>
-                        <td>❌ (limitata)</td>
-                        <td><span class="badge badge-success">✅</span> (enorme)</td>
+                        <td>No (limitata)</td>
+                        <td><span class="badge badge-success">Sì</span> (enorme)</td>
                     </tr>
                 </tbody>
             </table>
@@ -1531,41 +1569,41 @@ Cosa vuoi fare?
                 <tbody>
                     <tr>
                         <td>Ricerca MeSH terms</td>
-                        <td>❌</td>
-                        <td>✅</td>
+                        <td>No</td>
+                        <td>Sì</td>
                     </tr>
                     <tr>
                         <td>Filtri avanzati</td>
-                        <td>⚠️ (limitati)</td>
-                        <td>✅</td>
+                        <td>Limitati</td>
+                        <td>Sì</td>
                     </tr>
                     <tr>
                         <td>Tabelle indicizzate</td>
-                        <td><span class="badge badge-success">✅</span></td>
-                        <td>❌</td>
+                        <td><span class="badge badge-success">Sì</span></td>
+                        <td>No</td>
                     </tr>
                     <tr>
                         <td>Figure indicizzate</td>
-                        <td><span class="badge badge-success">✅</span></td>
-                        <td>❌</td>
+                        <td><span class="badge badge-success">Sì</span></td>
+                        <td>No</td>
                     </tr>
                     <tr>
                         <td>Full-text search</td>
-                        <td>✅</td>
-                        <td>⚠️ (limitato)</td>
+                        <td>Sì</td>
+                        <td>Limitato</td>
                     </tr>
                 </tbody>
             </table>
             
             <div class="info-box">
-                <h4>💡 Sintesi</h4>
+                <h4>Sintesi</h4>
                 <p>Il sistema è <strong>complementare</strong>, non sostitutivo dei motori esistenti. Il valore aggiunto principale è l'<strong>indicizzazione di tabelle e figure</strong> con contesto semantico.</p>
             </div>
             
             <h3>9.4 Case Study: Query Reale</h3>
             
             <div class="success-box">
-                <h4>📝 Scenario</h4>
+                <h4>Scenario</h4>
                 <p>Ricercatore cerca: <em>"performance comparison query processing distributed systems"</em></p>
                 
                 <p><strong>Workflow nel Sistema</strong>:</p>
@@ -1574,12 +1612,79 @@ Cosa vuoi fare?
                     <li><strong>Ricerca Tabelle</strong>: Trova "Table 2: Comparison of query execution times"</li>
                     <li><strong>Visualizzazione</strong>: Caption + contenuto + link paper + menzioni</li>
                 </ol>
-                table of contents
-        document.querySelectorAll('.toc-list a').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                <p><strong>Risultato</strong>: Accesso diretto ai dati comparativi senza leggere l'intero paper.</p>
+            </div>
+            
+            <h2 id="conclusioni">10. Conclusioni e Sviluppi Futuri</h2>
+            
+            <h3>10.1 Obiettivi Raggiunti</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Obiettivo</th>
+                        <th>Status</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Scraping arXiv</td>
+                        <td><span class="badge badge-success">Completo</span></td>
+                        <td>~30-50 articoli</td>
+                    </tr>
+                    <tr>
+                        <td>Scraping PubMed</td>
+                        <td><span class="badge badge-success">Completo</span></td>
+                        <td>500+ articoli OA</td>
+                    </tr>
+                    <tr>
+                        <td>Estrazione Tabelle</td>
+                        <td><span class="badge badge-success">Completo</span></td>
+                        <td>Precision 96.2%</td>
+                    </tr>
+                    <tr>
+                        <td>Estrazione Figure</td>
+                        <td><span class="badge badge-success">Completo</span></td>
+                        <td>Precision 98.1%</td>
+                    </tr>
+                    <tr>
+                        <td>Indicizzazione</td>
+                        <td><span class="badge badge-success">Completo</span></td>
+                        <td>3 indici separati</td>
+                    </tr>
+                    <tr>
+                        <td>Web Interface</td>
+                        <td><span class="badge badge-success">Completo</span></td>
+                        <td>Dashboard + API</td>
+                    </tr>
+                    <tr>
+                        <td>CLI Interface</td>
+                        <td><span class="badge badge-success">Completo</span></td>
+                        <td>Rich formatting</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>10.2 Contributi</h3>
+            
+            <h4>Contributi Tecnici</h4>
+            <ul>
+                <li><strong>Architettura modulare</strong> facilmente estendibile</li>
+                <li><strong>Pipeline robusta</strong> con error handling completo</li>
+                <li><strong>Indicizzazione innovativa</strong> di tabelle e figure</li>
+                <li><strong>Context mining</strong> per arricchimento semantico</li>
+            </ul>
+            
+            <h4>Contributi Pratici</h4>
+            <ul>
+                <li><strong>Codice open-source</strong> ben documentato</li>
+                <li><strong>Duplice interfaccia</strong> (Web + CLI)</li>
+                <li><strong>API REST</strong> per integrazione esterna</li>
+                <li><strong>Sistema production-ready</strong> con gestione stato</li>
+            </ul>
+            
             <h3>10.3 Sviluppi Futuri</h3>
             
             <div class="info-box">
@@ -1609,8 +1714,9 @@ Cosa vuoi fare?
             <p><strong>Pratico</strong>: Codice open-source riutilizzabile con documentazione completa</p>
             
             <div class="success-box" style="margin-top: 40px;">
-                <h4>🎯 Sintesi Finale</h4>
-                <p>Il progetto raggiunge e supera gli obiettivi prefissati, fornendo una solida base per ulteriori sviluppi nel campo dell'information retrieval scientifico. Le prestazioni quantitative (P@10 = 79%, latenza <100ms P95) e la feedback qualitativa confermano la validità dell'approccio.</p>
+                <h4>Sintesi Finale</h4>
+                <p>Il progetto raggiunge e supera gli obiettivi prefissati, fornendo una solida base per ulteriori sviluppi nel campo dell'information retrieval scientifico. Le prestazioni quantitative (P@10 = 79%, latenza &lt;100ms P95) e il feedback qualitativo confermano la validità dell'approccio.</p>
+                <p style="margin-top: 15px;">L'innovazione principale risiede nel trattamento di tabelle e figure come entità ricercabili di prima classe, colmando una lacuna significativa nei sistemi esistenti e aprendo nuove possibilità per la ricerca scientifica efficiente.</p>
             </div>
         </div>
     </div>
@@ -1623,8 +1729,8 @@ Cosa vuoi fare?
     </div>
     
     <script>
-        // Smooth scroll for navigation
-        document.querySelectorAll('.toc-nav a').forEach(anchor => {
+        // Smooth scroll for table of contents
+        document.querySelectorAll('.toc-list a').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
@@ -1632,10 +1738,10 @@ Cosa vuoi fare?
             });
         });
         
-        // Active nav highlight
+        // Active section highlight on scroll
         window.addEventListener('scroll', () => {
             const sections = document.querySelectorAll('h2[id]');
-            const navLinks = document.querySelectorAll('.toc-nav a');
+            const navLinks = document.querySelectorAll('.toc-list a');
             
             let current = '';
             sections.forEach(section => {
@@ -1646,11 +1752,11 @@ Cosa vuoi fare?
             });
             
             navLinks.forEach(link => {
-                link.style.background = '';
+                link.style.fontWeight = '';
                 link.style.color = '';
                 if (link.getAttribute('href') === `#${current}`) {
-                    link.style.background = 'var(--primary)';
-                    link.style.color = 'white';
+                    link.style.fontWeight = '600';
+                    link.style.color = 'var(--primary)';
                 }
             });
         });
