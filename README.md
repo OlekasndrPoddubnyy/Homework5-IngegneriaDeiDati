@@ -44,44 +44,70 @@ Modificare `config.py` per:
 - Selezionare le keyword PubMed (gruppi 1-4)
 - Configurare host Elasticsearch
 
+**Opzionale**: Impostare variabile ambiente per Flask:
+```bash
+# Windows PowerShell
+$env:FLASK_SECRET_KEY="tua-chiave-sicura-qui"
+
+# Linux/Mac
+export FLASK_SECRET_KEY="tua-chiave-sicura-qui"
+```
+
+Se non impostata, verrà generata automaticamente ad ogni avvio.
+
 ## Utilizzo
 
-### Fase 1: Scraping articoli
+### Esecuzione Completa (Consigliato)
+
+**Pipeline automatica** che gestisce scraping, estrazione e indicizzazione:
 
 ```bash
-# Scraping da arXiv (Query processing/optimization)
-python scrapers/arxiv_scraper.py
-
-# Scraping da PubMed (almeno 500 articoli)
-python scrapers/pubmed_scraper.py
+python main.py
 ```
 
-### Fase 2: Estrazione tabelle e figure
+Il sistema chiederà interattivamente come procedere:
+- **[1] Cancella tutto e ricomincia** - Reset completo
+- **[2] Continua** - Salta articoli già scaricati
+- **[3] Salta scraping** - Usa dati esistenti e re-indicizza
+- **[4] Esci** - Annulla operazione
+
+### Esecuzione Modulare (Avanzato)
+
+Per eseguire singole fasi separatamente:
 
 ```bash
+# Fase 1: Scraping
+python scrapers/arxiv_scraper.py
+python scrapers/pubmed_scraper.py
+
+# Fase 2: Estrazione
 python extractors/table_extractor.py
 python extractors/figure_extractor.py
-```
 
-### Fase 3: Indicizzazione
-
-```bash
+# Fase 3: Indicizzazione
 python indexers/paper_indexer.py
 python indexers/table_indexer.py
 python indexers/figure_indexer.py
 ```
 
-### Fase 4: Ricerca
+### Interfacce di Ricerca
+
+**Web Interface** (Consigliata):
+```bash
+python web/app.py
+# Apri http://localhost:5000
+```
+
+Funzionalità:
+- Ricerca full-text e booleana
+- Filtro per fonte (arXiv/PubMed)
+- Ricerca in articoli, tabelle o figure
+- Visualizzazione dettagli articolo con tabelle/figure
+- Highlighting termini ricercati
 
 **CLI (Command Line Interface):**
 ```bash
 python cli/search_cli.py
-```
-
-**Web Interface:**
-```bash
-python web/app.py
-# Apri http://localhost:5000
 ```
 
 ## Struttura Progetto

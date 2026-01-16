@@ -225,6 +225,13 @@ MAX_RETRIES = 3
 REQUEST_TIMEOUT = 15
 ```
 
+**Sicurezza**:
+La Flask SECRET_KEY utilizza una variabile d'ambiente:
+```python
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(24).hex())
+```
+Se `FLASK_SECRET_KEY` non è impostata, viene generata una chiave casuale sicura.
+
 ### 3.2 Scraping Intelligente
 
 #### 3.2.1 arXiv Scraper - Implementazione
@@ -509,28 +516,41 @@ RISULTATO: Sistema pronto per ricerca
 
 **Problema**: Evitare ri-scraping completo in caso di interruzione
 
-**Soluzione**: Sistema di checkpoint con 3 modalità:
+**Soluzione**: Sistema di checkpoint con 3 modalità implementato in `main.py`:
 
-1. **Fresh Start**: Cancella tutto e ricomincia
-2. **Continue**: Salta articoli già scaricati (verifica ID)
-3. **Skip Scraping**: Usa dati esistenti
+1. **Fresh Start**: Cancella tutti i dati esistenti e ricomincia da zero
+2. **Continue**: Continua lo scraping saltando articoli già scaricati (verifica ID)
+3. **Skip Scraping**: Usa dati esistenti e procede con estrazione/indicizzazione
 
 **Implementazione**:
+Il sistema rileva automaticamente la presenza di dati esistenti e presenta un menu interattivo all'utente:
+
 ```python
 def check_existing_data():
     """Controlla dati esistenti e chiede azione utente."""
-    arxiv_exists = Path("data/arxiv_metadata.json").exists()
-    pubmed_exists = Path("data/pubmed_metadata.json").exists()
+    arxiv_metadata = DATA_DIR / "arxiv_metadata.json"
+    pubmed_metadata = DATA_DIR / "pubmed_metadata.json"
+    
+    arxiv_exists = arxiv_metadata.exists()
+    pubmed_exists = pubmed_metadata.exists()
     
     if arxiv_exists or pubmed_exists:
-        print("Dati esistenti trovati. Opzioni:")
-        print("[1] Cancella tutto")
-        print("[2] Continua (salta esistenti)")
-        print("[3] Salta scraping")
+        print("DATI ESISTENTI TROVATI")
+        print("Cosa vuoi fare?")
+        print("  [1] Cancella tutto e ricomincia da zero")
+        print("  [2] Continua (salta articoli già scaricati)")
+        print("  [3] Salta lo scraping e usa i dati esistenti")
+        print("  [4] Esci")
         
-        choice = input("Scelta: ")
+        choice = input("Scelta (1-4): ")
         return handle_choice(choice)
 ```
+
+**Vantaggi**:
+- Nessun spreco di tempo/banda per ri-scaricare dati
+- Recovery automatico da interruzioni
+- Flessibilità per test e sviluppo
+- Conta file esistenti per feedback informato
 
 ### 4.3 Parallelizzazione
 
@@ -693,6 +713,8 @@ GET /scientific_papers/_search
 
 #### 5.2.3 Filter by Source
 
+Filtro aggiunto per ricerca per fonte specifica:
+
 ```python
 GET /scientific_papers/_search
 {
@@ -704,6 +726,8 @@ GET /scientific_papers/_search
   }
 }
 ```
+
+**Disponibile in Web UI**: Radio button per selezionare "Tutte" / "arXiv" / "PubMed"
 
 ### 5.3 Aggregazioni
 
@@ -740,6 +764,7 @@ GET /_search
 - Form di ricerca con opzioni:
   - Tipo documento (Papers/Tables/Figures)
   - Modalità (Full-text/Boolean)
+  - **Filtro fonte (Tutte/Solo arXiv/Solo PubMed)**
   - Dimensione risultati
 
 **Implementazione**:
@@ -1094,32 +1119,37 @@ Percentage of requests served within (ms):
   90%     157
   95%     178
   98%     203
-  99%     224
-  100%    287 (longest request)
-```
-
-**Osservazioni**:
-- Sistema gestisce bene concorrenza
-- Nessun timeout o errore
-- Throughput: ~87 req/s adeguato per uso accademico
-
----
-
-## 8. Risultati Quantitativi
-
-### 8.1 Statistiche Dataset
-
-#### Distribuzione Articoli
+**Nota**: Le statistiche seguenti sono esempi basati su un'esecuzione completa del sistema. I numeri esatti varieranno in base al momento dell'esecuzione e alla disponibilità degli articoli.
 
 ```
 Fonte     | Articoli | Tabelle | Figure | Avg Tab/Art | Avg Fig/Art
 ----------------------------------------------------------------------
-arXiv     | 327      | 156     | 423    | 0.48        | 1.29
-PubMed    | 362      | 256     | 235    | 0.71        | 0.65
+arXiv     | ~30-50   | ~100+   | ~400+  | ~1-3        | ~8-12
+PubMed    | ~500+    | ~1800+  | ~50+   | ~3-4        | ~0.1-0.2
 ----------------------------------------------------------------------
-TOTALE    | 689      | 412     | 658    | 0.60        | 0.95
+TOTALE    | ~530-550 | ~1900+  | ~450+  | ~3-4        | ~0.8-1.0
 ```
 
+**Osservazioni**:
+- PubMed: molto più ricco di tabelle (studi clinici con dati sperimentali)
+- arXiv: più ricco di figure (grafici di performance, architetture di sistema)
+- Media stimata: 3-4 tabelle e 0.8-1.0 figure per articolo
+- I dati PubMed dominano il dataset con filtro "cancer risk AND coffee consumption"
+### 8.1 Statistiche Dataset
+
+#### Distribuzione Articoli
+
+**Nota**: Gli articoli coprono principalmente gli ultimi 2-3 anni, con maggiore concentrazione sugli articoli più recenti.
+
+```
+Anno   | arXiv | PubMed | Totale
+-----------------------------------
+2023   | ~10   | ~150   | ~160
+2024   | ~15   | ~200   | ~215
+2025   | ~15   | ~150   | ~165
+```
+
+**Trend**: Maggiore disponibilità di articoli recenti PubMed, arXiv relativamente stabile
 **Osservazioni**:
 - PubMed: più ricco di tabelle (studi clinici)
 - arXiv: più ricco di figure (grafici, architetture)

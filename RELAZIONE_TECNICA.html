@@ -677,6 +677,13 @@ REQUEST_DELAY = 1.5  # secondi
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 15</code></pre>
             
+            <div class="success-box">
+                <h4>🔐 Sicurezza</h4>
+                <p>La Flask SECRET_KEY utilizza una variabile d'ambiente per maggiore sicurezza:</p>
+                <pre><code>app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(24).hex())</code></pre>
+                <p>Se <code>FLASK_SECRET_KEY</code> non è impostata, viene generata automaticamente una chiave casuale sicura.</p>
+            </div>
+            
             <h3>3.2 Scraping Intelligente</h3>
             
             <h4>3.2.1 arXiv Scraper</h4>
@@ -981,19 +988,28 @@ FASE 3: INDEXING
                 <ul>
                     <li>Statistiche totali: articoli, tabelle, figure</li>
                     <li>Breakdown per fonte (arXiv vs PubMed)</li>
-                    <li>Form di ricerca con opzioni multiple</li>
+                    <li>Form di ricerca con opzioni multiple:
+                        <ul>
+                            <li>Tipo documento (Papers/Tables/Figures)</li>
+                            <li>Modalità ricerca (Full-text/Boolean)</li>
+                            <li><strong>Filtro fonte (Tutte/Solo arXiv/Solo PubMed)</strong></li>
+                            <li>Dimensione risultati</li>
+                        </ul>
+                    </li>
                     <li>Guida rapida per l'utente</li>
                 </ul>
             </div>
             
             <h4>6.1.2 Search Results</h4>
-            <p>Endpoint: <code>/search?q={query}&type={type}&search_type={mode}</code></p>
+            <p>Endpoint: <code>/search?q={query}&type={type}&search_type={mode}&source={fonte}</code></p>
             
             <ul>
-                <li><strong>Highlighting</strong>: termini ricercati evidenziati</li>
-                <li><strong>Score</strong>: indicatore di rilevanza visualizzato</li>
+                <li><strong>Highlighting</strong>: termini ricercati evidenziati con tag &lt;mark&gt;</li>
+                <li><strong>Score</strong>: indicatore di rilevanza visualizzato per ogni risultato</li>
                 <li><strong>Snippet</strong>: estratti contestuali del documento</li>
-                <li><strong>Filtri</strong>: per tipo documento e fonte</li>
+                <li><strong>Filtro Fonte</strong>: ricerca limitata a arXiv, PubMed o entrambi</li>
+                <li><strong>Badge Fonte</strong>: ogni risultato mostra la fonte con colore distintivo</li>
+                <li><strong>Link Diretti</strong>: collegamento alla pagina dettagli articolo</li>
             </ul>
             
             <h4>6.1.3 Paper Detail View</h4>
@@ -1037,7 +1053,7 @@ FASE 3: INDEXING
             
             <h3>6.2 CLI Interface (Rich)</h3>
             
-            <h4>Menu Interattivo</h4>
+            <h4>Menu Interattivo CLI Ricerca</h4>
             <p>Interfaccia a riga di comando con formattazione colorata:</p>
             
             <pre><code>╔══════════════════════════════════════════════════════╗
@@ -1050,6 +1066,31 @@ Opzioni:
   [3] Cerca Figure
   [4] Statistiche Sistema
   [5] Esci</code></pre>
+            
+            <h4>Menu Interattivo main.py</h4>
+            <p>Il sistema <code>main.py</code> rileva automaticamente dati esistenti e presenta un menu di gestione:</p>
+            
+            <pre><code>DATI ESISTENTI TROVATI
+================================
+   arXiv: X articoli in metadata, Y file HTML
+   PubMed: X articoli in metadata, Y file HTML
+================================
+
+Cosa vuoi fare?
+  [1] Cancella tutto e ricomincia da zero
+  [2] Continua (salta articoli già scaricati)
+  [3] Salta lo scraping e usa i dati esistenti
+  [4] Esci</code></pre>
+            
+            <div class="info-box">
+                <h4>Opzioni Menu main.py</h4>
+                <ul>
+                    <li><strong>[1] Fresh Start</strong>: Elimina tutti i dati esistenti e ricomincia da zero</li>
+                    <li><strong>[2] Continue</strong>: Continua lo scraping saltando articoli già scaricati (verifica ID)</li>
+                    <li><strong>[3] Skip Scraping</strong>: Usa dati esistenti e procede con estrazione/indicizzazione</li>
+                    <li><strong>[4] Exit</strong>: Annulla operazione senza modifiche</li>
+                </ul>
+            </div>
             
             <div class="success-box">
                 <h4>✓ Vantaggi CLI</h4>
@@ -1167,28 +1208,41 @@ Opzioni:
             
             <h3>8.1 Statistiche Dataset</h3>
             
+            <div class="warning-box">
+                <h4>⚠️ Nota sulle Statistiche</h4>
+                <p>Le statistiche seguenti sono esempi basati su un'esecuzione completa del sistema. I numeri esatti varieranno in base al momento dell'esecuzione e alla disponibilità degli articoli.</p>
+            </div>
+            
             <div class="stats-grid">
                 <div class="stat-card">
                     <h4>Articoli arXiv</h4>
-                    <div class="value">327</div>
+                    <div class="value">~30-50</div>
                     <div class="label">Query processing & optimization</div>
                 </div>
                 <div class="stat-card">
                     <h4>Articoli PubMed</h4>
-                    <div class="value">362</div>
+                    <div class="value">~500+</div>
                     <div class="label">Cancer risk & coffee</div>
                 </div>
                 <div class="stat-card">
                     <h4>Tabelle Totali</h4>
-                    <div class="value">412</div>
-                    <div class="label">Precisione 96.2%</div>
+                    <div class="value">~1900+</div>
+                    <div class="label">Precision 96.2%</div>
                 </div>
                 <div class="stat-card">
                     <h4>Figure Totali</h4>
-                    <div class="value">658</div>
-                    <div class="label">Precisione 98.1%</div>
+                    <div class="value">~450+</div>
+                    <div class="label">Precision 98.1%</div>
                 </div>
             </div>
+            
+            <p><strong>Osservazioni</strong>:</p>
+            <ul>
+                <li>PubMed: molto più ricco di tabelle (studi clinici con dati sperimentali)</li>
+                <li>arXiv: più ricco di figure (grafici di performance, architetture di sistema)</li>
+                <li>Media stimata: 3-4 tabelle e 0.8-1.0 figure per articolo</li>
+                <li>I dati PubMed dominano il dataset con filtro "cancer risk AND coffee consumption"</li>
+            </ul>
             
             <h3>8.2 Query Performance</h3>
             <table>
