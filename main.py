@@ -23,6 +23,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Costanti
+ARXIV_METADATA_FILE = "arxiv_metadata.json"
+PUBMED_METADATA_FILE = "pubmed_metadata.json"
+HTML_GLOB_PATTERN = "*.html"
+
 # Importa moduli del progetto
 from config import (
     DATA_DIR, PAPERS_DIR, ARXIV_KEYWORDS, PUBMED_KEYWORDS,
@@ -45,15 +50,15 @@ def check_existing_data():
     Returns:
         str: 'fresh' per ricominciare, 'continue' per continuare, 'skip' per saltare scraping
     """
-    arxiv_metadata = DATA_DIR / "arxiv_metadata.json"
-    pubmed_metadata = DATA_DIR / "pubmed_metadata.json"
+    arxiv_metadata = DATA_DIR / ARXIV_METADATA_FILE
+    pubmed_metadata = DATA_DIR / PUBMED_METADATA_FILE
     
     arxiv_exists = arxiv_metadata.exists()
     pubmed_exists = pubmed_metadata.exists()
     
     # Conta file HTML/XML esistenti
-    arxiv_html_count = len(list(ARXIV_DATA_DIR.glob("*.html"))) if ARXIV_DATA_DIR.exists() else 0
-    pubmed_html_count = len(list(PUBMED_DATA_DIR.glob("*.html"))) + len(list(PUBMED_DATA_DIR.glob("*.xml"))) if PUBMED_DATA_DIR.exists() else 0
+    arxiv_html_count = len(list(ARXIV_DATA_DIR.glob(HTML_GLOB_PATTERN))) if ARXIV_DATA_DIR.exists() else 0
+    pubmed_html_count = len(list(PUBMED_DATA_DIR.glob(HTML_GLOB_PATTERN))) + len(list(PUBMED_DATA_DIR.glob("*.xml"))) if PUBMED_DATA_DIR.exists() else 0
     
     if not arxiv_exists and not pubmed_exists and arxiv_html_count == 0 and pubmed_html_count == 0:
         print("\n[INFO] Nessun dato esistente trovato. Avvio nuovo scraping...")
@@ -99,10 +104,10 @@ def check_existing_data():
                         pubmed_metadata.unlink()
                     # Elimina HTML files
                     if ARXIV_DATA_DIR.exists():
-                        for f in ARXIV_DATA_DIR.glob("*.html"):
+                        for f in ARXIV_DATA_DIR.glob(HTML_GLOB_PATTERN):
                             f.unlink()
                     if PUBMED_DATA_DIR.exists():
-                        for f in PUBMED_DATA_DIR.glob("*.html"):
+                        for f in PUBMED_DATA_DIR.glob(HTML_GLOB_PATTERN):
                             f.unlink()
                     # Elimina altri file json nella data dir
                     for f in DATA_DIR.glob("*.json"):
@@ -137,8 +142,8 @@ def load_existing_articles():
     arxiv_articles = []
     pubmed_articles = []
     
-    arxiv_metadata = DATA_DIR / "arxiv_metadata.json"
-    pubmed_metadata = DATA_DIR / "pubmed_metadata.json"
+    arxiv_metadata = DATA_DIR / ARXIV_METADATA_FILE
+    pubmed_metadata = DATA_DIR / PUBMED_METADATA_FILE
     
     if arxiv_metadata.exists():
         with open(arxiv_metadata, 'r', encoding='utf-8') as f:
@@ -171,8 +176,8 @@ def run_scraping(continue_mode=False):
     pubmed_articles = []
     
     if continue_mode:
-        arxiv_metadata = DATA_DIR / "arxiv_metadata.json"
-        pubmed_metadata = DATA_DIR / "pubmed_metadata.json"
+        arxiv_metadata = DATA_DIR / ARXIV_METADATA_FILE
+        pubmed_metadata = DATA_DIR / PUBMED_METADATA_FILE
         
         if arxiv_metadata.exists():
             with open(arxiv_metadata, 'r', encoding='utf-8') as f:
@@ -221,7 +226,7 @@ def run_scraping(continue_mode=False):
     logger.info(f"[OK] arXiv: totale {len(arxiv_articles)} articoli")
     
     # Salva metadata arXiv
-    arxiv_meta_path = DATA_DIR / "arxiv_metadata.json"
+    arxiv_meta_path = DATA_DIR / ARXIV_METADATA_FILE
     with open(arxiv_meta_path, 'w', encoding='utf-8') as f:
         json.dump(arxiv_articles, f, ensure_ascii=False, indent=2)
     
@@ -261,7 +266,7 @@ def run_scraping(continue_mode=False):
     logger.info(f"[OK] PubMed: totale {len(pubmed_articles)} articoli")
     
     # Salva metadata PubMed
-    pubmed_meta_path = DATA_DIR / "pubmed_metadata.json"
+    pubmed_meta_path = DATA_DIR / PUBMED_METADATA_FILE
     with open(pubmed_meta_path, 'w', encoding='utf-8') as f:
         json.dump(pubmed_articles, f, ensure_ascii=False, indent=2)
     

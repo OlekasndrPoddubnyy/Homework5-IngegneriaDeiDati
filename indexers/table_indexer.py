@@ -14,7 +14,7 @@ Campi indicizzati:
 import os
 import sys
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 
 from elasticsearch import Elasticsearch, helpers
@@ -66,7 +66,7 @@ class TableIndexer:
                 "mentions": '\n\n'.join(table.get('mentions', [])),
                 "context_paragraphs": '\n\n'.join(table.get('context_paragraphs', [])),
                 "position": table.get('position', 0),
-                "indexed_at": datetime.utcnow().isoformat()
+                "indexed_at": datetime.now(timezone.utc).isoformat()
             }
         }
     
@@ -112,7 +112,7 @@ class TableIndexer:
                         body=doc['_source']
                     )
                     success_count += 1
-                except:
+                except Exception:
                     failed_count += 1
         
         print(f"[OK] Indicizzate: {success_count}, Fallite: {failed_count}")

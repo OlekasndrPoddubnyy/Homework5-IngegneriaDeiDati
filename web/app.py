@@ -21,10 +21,15 @@ from config import (
 )
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'homework5-ingegneria-dati-2025'
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY', os.urandom(24).hex())
 
 # Connessione Elasticsearch
 es = Elasticsearch(ELASTICSEARCH_URL)
+
+# Costanti per i campi di ricerca
+PAPER_FIELDS = ["title^3", "abstract^2", "full_text", "authors"]
+TABLE_FIELDS = ["caption^3", "body^2", "mentions", "context_paragraphs", "informative_terms^2"]
+FIGURE_FIELDS = ["caption^3", "mentions^2", "context_paragraphs", "informative_terms"]
 
 
 def search_index(index: str, query: str, fields: list, size: int = 20, source_filter: str = None):
@@ -155,7 +160,7 @@ def home():
                 stats[index] = es.count(index=index)['count']
             else:
                 stats[index] = 0
-        except:
+        except Exception:
             stats[index] = 0
     
     # Ottieni statistiche per fonte (arXiv vs PubMed)
@@ -177,7 +182,7 @@ def home():
                 body={"query": {"term": {"source": "pubmed"}}}
             )
             pubmed_stats['papers'] = pubmed_count.get('count', 0)
-    except:
+    except Exception:
         pass
     
     try:
@@ -195,7 +200,7 @@ def home():
                 body={"query": {"term": {"source": "pubmed"}}}
             )
             pubmed_stats['tables'] = pubmed_tables.get('count', 0)
-    except:
+    except Exception:
         pass
     
     try:
@@ -213,7 +218,7 @@ def home():
                 body={"query": {"term": {"source": "pubmed"}}}
             )
             pubmed_stats['figures'] = pubmed_figures.get('count', 0)
-    except:
+    except Exception:
         pass
     
     return render_template(
@@ -237,18 +242,15 @@ def search():
         return render_template('results.html', results=[], query='', doc_type=doc_type, source_filter=source_filter, total=0)
     
     # Determina indice e campi
-    if doc_type == 'papers':
-        index = INDEX_PAPERS
-        fields = ["title^3", "abstract^2", "full_text", "authors"]
-    elif doc_type == 'tables':
+    if doc_type == 'tables':
         index = INDEX_TABLES
-        fields = ["caption^3", "body^2", "mentions", "context_paragraphs", "informative_terms^2"]
+        fields = TABLE_FIELDS
     elif doc_type == 'figures':
         index = INDEX_FIGURES
-        fields = ["caption^3", "mentions^2", "context_paragraphs", "informative_terms"]
-    else:
+        fields = FIGURE_FIELDS
+    else:  # papers o tipo non valido
         index = INDEX_PAPERS
-        fields = ["title^3", "abstract^2", "full_text"]
+        fields = PAPER_FIELDS
     
     # Esegui ricerca
     if search_type == 'boolean':
@@ -303,13 +305,13 @@ def api_search():
     # Determina indice e campi
     if doc_type == 'papers':
         index = INDEX_PAPERS
-        fields = ["title^3", "abstract^2", "full_text", "authors"]
+        fields = PAPER_FIELDS
     elif doc_type == 'tables':
         index = INDEX_TABLES
-        fields = ["caption^3", "body^2", "mentions", "context_paragraphs"]
+        fields = TABLE_FIELDS
     elif doc_type == 'figures':
         index = INDEX_FIGURES
-        fields = ["caption^3", "mentions^2", "context_paragraphs"]
+        fields = FIGURE_FIELDS
     else:
         return jsonify({'error': 'Tipo documento non valido', 'results': [], 'total': 0})
     

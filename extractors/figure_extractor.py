@@ -22,6 +22,9 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
 
+# Costanti
+HTML_EXTENSION = '.html'
+
 # Aggiungi il path principale al PYTHONPATH
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
@@ -337,7 +340,7 @@ class FigureExtractor:
     
     def process_arxiv_articles(self) -> int:
         """Processa tutti gli articoli arXiv."""
-        html_files = [f for f in os.listdir(ARXIV_DATA_DIR) if f.endswith('.html')]
+        html_files = [f for f in os.listdir(ARXIV_DATA_DIR) if f.endswith(HTML_EXTENSION)]
         
         if not html_files:
             print("[WARN] Nessun file HTML trovato in arXiv")
@@ -348,7 +351,7 @@ class FigureExtractor:
         
         for filename in tqdm(html_files, desc="Estrazione figure arXiv"):
             filepath = os.path.join(ARXIV_DATA_DIR, filename)
-            paper_id = filename.replace('.html', '')
+            paper_id = filename.replace(HTML_EXTENSION, '')
             
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
@@ -359,7 +362,7 @@ class FigureExtractor:
                 self.figures.extend(figures)
                 count += len(figures)
                 
-            except Exception as e:
+            except Exception:
                 pass
         
         return count
@@ -379,7 +382,7 @@ class FigureExtractor:
         
         for filename in tqdm(all_files, desc="Estrazione figure PubMed"):
             filepath = os.path.join(PUBMED_DATA_DIR, filename)
-            paper_id = filename.replace('.html', '').replace('.xml', '')
+            paper_id = filename.replace(HTML_EXTENSION, '').replace('.xml', '')
             
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
@@ -390,7 +393,7 @@ class FigureExtractor:
                 self.figures.extend(figures)
                 count += len(figures)
                 
-            except Exception as e:
+            except Exception:
                 pass
         
         return count

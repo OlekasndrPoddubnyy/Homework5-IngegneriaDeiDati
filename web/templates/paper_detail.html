@@ -185,12 +185,12 @@
         
         .badge-count-table {
             background: rgba(16, 185, 129, 0.15);
-            color: #10b981;
+            color: #047857; /* Verde più scuro per WCAG AA */
         }
         
         .badge-count-figure {
             background: rgba(236, 72, 153, 0.15);
-            color: #ec4899;
+            color: #be185d; /* Rosa più scuro per WCAG AA */
         }
         
         .table-item, .figure-item {
@@ -397,7 +397,7 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg" aria-label="Navigazione principale">
         <div class="container">
             <a class="navbar-brand" href="/">
                 <i class="bi bi-journal-richtext"></i>
@@ -589,6 +589,7 @@
                                         {% if figure.url %}
                                             <img src="{{ figure.url }}" 
                                                  alt="{{ figure.caption }}"
+                                                 style="cursor: pointer;"
                                                  onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300?text=Immagine+non+disponibile';">
                                         {% else %}
                                             <i class="bi bi-image" style="font-size: 4rem; color: #ccc;"></i>
