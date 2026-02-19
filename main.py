@@ -406,10 +406,10 @@ def main():
     start_time = datetime.now()
     
     print("""
-╔══════════════════════════════════════════════════════════════════╗
-║   Sistema di Ricerca Articoli Scientifici                        ║
-║   Ingegneria dei Dati 2025/2026 - Homework 5                     ║
-╚══════════════════════════════════════════════════════════════════╝
+==================================================================
+  Sistema di Ricerca Articoli Scientifici
+  Ingegneria dei Dati 2025/2026 - Homework 5
+==================================================================
     """)
     
     try:
@@ -454,13 +454,13 @@ def main():
         logger.info(f"\n[OK] Pipeline completata in {elapsed}")
         
         print("""
-+------------------------------------------------------------------+
-|   PIPELINE COMPLETATA CON SUCCESSO                               |
-|                                                                  |
-|   Per avviare l'interfaccia:                                    |
-|   - CLI: python cli/search_cli.py                               |
-|   - Web: python web/app.py                                      |
-+------------------------------------------------------------------+
+    ------------------------------------------------------------------
+     PIPELINE COMPLETATA CON SUCCESSO
+
+     Per avviare l'interfaccia:
+     - CLI: python cli/search_cli.py
+     - Web: python web/app.py
+    ------------------------------------------------------------------
         """)
         
     except KeyboardInterrupt:

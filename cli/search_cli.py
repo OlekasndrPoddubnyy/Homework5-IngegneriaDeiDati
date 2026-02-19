@@ -229,15 +229,15 @@ class SearchEngine:
 class SearchCLI(cmd.Cmd):
     """Interfaccia a riga di comando per il sistema di ricerca."""
     
-    intro = """
-╔══════════════════════════════════════════════════════════════════╗
-║   Sistema di Ricerca Articoli Scientifici - Homework 5           ║
-║   Ingegneria dei Dati 2025/2026                                  ║
-╚══════════════════════════════════════════════════════════════════╝
+        intro = """
+==================================================================
+    Sistema di Ricerca Articoli Scientifici - Homework 5
+    Ingegneria dei Dati 2025/2026
+==================================================================
 
 Comandi disponibili:
-  papers <query>    - Cerca negli articoli
-  tables <query>    - Cerca nelle tabelle
+    papers <query>    - Cerca negli articoli
+    tables <query>    - Cerca nelle tabelle
   figures <query>   - Cerca nelle figure
   bool <query>      - Ricerca booleana (usa AND, OR, NOT)
   stats             - Mostra statistiche

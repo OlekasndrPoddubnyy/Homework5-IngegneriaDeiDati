@@ -71,45 +71,6 @@ Il sistema chiederà interattivamente come procedere:
 - **[3] Salta scraping** - Usa dati esistenti e re-indicizza
 - **[4] Esci** - Annulla operazione
 
-### Esecuzione Modulare (Avanzato)
-
-Per eseguire singole fasi separatamente:
-
-```bash
-# Fase 1: Scraping
-python scrapers/arxiv_scraper.py
-python scrapers/pubmed_scraper.py
-
-# Fase 2: Estrazione
-python extractors/table_extractor.py
-python extractors/figure_extractor.py
-
-# Fase 3: Indicizzazione
-python indexers/paper_indexer.py
-python indexers/table_indexer.py
-python indexers/figure_indexer.py
-```
-
-### Interfacce di Ricerca
-
-**Web Interface** (Consigliata):
-```bash
-python web/app.py
-# Apri http://localhost:5000
-```
-
-Funzionalità:
-- Ricerca full-text e booleana
-- Filtro per fonte (arXiv/PubMed)
-- Ricerca in articoli, tabelle o figure
-- Visualizzazione dettagli articolo con tabelle/figure
-- Highlighting termini ricercati
-
-**CLI (Command Line Interface):**
-```bash
-python cli/search_cli.py
-```
-
 ## Struttura Progetto
 
 ```
@@ -149,17 +110,3 @@ Homework 5/
 └── tests/                    # Test unitari
     └── test_search.py        # Test ricerca
 ```
-
-## Keywords Assegnate
-
-### arXiv (Studenti Lavoratori)
-- "Query processing"
-- "Query optimization"
-
-### PubMed (scegliere un gruppo)
-- Gruppo 1: "cancer risk AND coffee consumption"
-- Gruppo 2: "glyphosate AND cancer risk"
-- Gruppo 3: "air pollution AND cognitive decline"
-- Gruppo 4: "ultra-processed foods AND cardiovascular risk"
-
-
